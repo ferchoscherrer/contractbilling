@@ -88,92 +88,85 @@ private _updateTableStatistics(): void {
 
 
 private _onObjectMatched(oEvent: any): void {
-        const oView = this.getView();
-        if (!oView) return;
+    const oView = this.getView();
+    if (!oView) return;
 
-        const oArgs = oEvent.getParameter("arguments");
-        const sCustomer = oArgs.customerId;
-        const sDate = oArgs.date;
-        const aFilters: Filter[] = [];
+    const oArgs = oEvent.getParameter("arguments");
+    const sCustomer = oArgs.customerId;
+    const sDate = oArgs.date;
+    
+    // 1. Array único de filtros
+    const aFinalFilters: Filter[] = [];
 
-        // 1. OBTENER DATOS DEL MODELO GLOBAL
-        const oComponent = this.getOwnerComponent();
-        const oModelPeticion = this.getOwnerComponent()?.getModel("mBillingContract") as JSONModel;
+    // Recuperar modelo de petición
+    const oModelPeticion = this.getOwnerComponent()?.getModel("mBillingContract") as JSONModel;
+    const aSelectedCustomers = oModelPeticion?.getProperty("/oQuery/selectedCustomers") || [];
+    const aSelectedQuotations = oModelPeticion?.getProperty("/oQuery/selectedQuotations") || [];
+    const aSelectedStatus = oModelPeticion?.getProperty("/oQuery/selectedStatus") || [];
 
-        // Si el modelo está vacío (por un refresh), intentamos recuperar de la sesión
-        if (oModelPeticion && (!oModelPeticion.getProperty("/oQuery/selectedCustomers") || 
-            oModelPeticion.getProperty("/oQuery/selectedCustomers").length === 0)) {
-            
-            const sSavedData = sessionStorage.getItem("lastBillingQuery");
-            if (sSavedData) {
-                oModelPeticion.setData(JSON.parse(sSavedData));
-            }
-        }
+    // --- AGREGAR FILTROS AL ARRAY ÚNICO ---
 
-        const aSelectedCustomers = oModelPeticion?.getProperty("/oQuery/selectedCustomers") || [];
-        const aSelectedQuotations = oModelPeticion?.getProperty("/oQuery/selectedQuotations") || [];
-        const aSelectedStatus = oModelPeticion?.getProperty("/oQuery/selectedStatus") || [];
-       
-   
+    // Clientes
+    if (sCustomer === "multi" && aSelectedCustomers.length > 0) {
+        aFinalFilters.push(new Filter({
+            filters: aSelectedCustomers.map((id: string) => new Filter("Cliente", FilterOperator.EQ, id)),
+            and: false
+        }));
+    } else if (sCustomer && sCustomer !== "multi" && sCustomer !== "all") {
+        aFinalFilters.push(new Filter("Cliente", FilterOperator.EQ, sCustomer));
+    }
 
-        // 2. FILTRADO DE CLIENTES
-        if (sCustomer === "multi" && aSelectedCustomers.length > 0) {
-            const aCustomerFilters = aSelectedCustomers.map((sId: string) => 
-                new Filter("Cliente", FilterOperator.EQ, sId)
-            );
-            aFilters.push(new Filter({ filters: aCustomerFilters, and: false }));
-        } else if (sCustomer && sCustomer !== "multi" && sCustomer !== "all") {
-            aFilters.push(new Filter("Cliente", FilterOperator.EQ, sCustomer));
-        }
+    // Cotizaciones (Quotation)
+    if (aSelectedQuotations.length > 0) {
+        aFinalFilters.push(new Filter({
+            filters: aSelectedQuotations.map((id: string) => new Filter("Contrato", FilterOperator.EQ, id)),
+            and: false
+        }));
+    }
 
-        // 3. FILTRADO DE COTIZACIONES
-        if (aSelectedQuotations.length > 0) {
-            const aQuotationFilters = aSelectedQuotations.map((sId: string) => 
-                new Filter("Contrato", FilterOperator.EQ, sId) 
-            );
-            aFilters.push(new Filter({ filters: aQuotationFilters, and: false }));
-        }
+    // Status
+    if (aSelectedStatus.length > 0) {
+        aFinalFilters.push(new Filter({
+            filters: aSelectedStatus.map((key: string) => new Filter("Status", FilterOperator.EQ, key)),
+            and: false
+        }));
+    }
 
-        // 4. FILTRADO POR ESTATUS
-        if (aSelectedStatus.length > 0) {
-            const aStatusFilters = aSelectedStatus.map((sKey: string) => 
-                new Filter("Status", FilterOperator.EQ, sKey)
-            );
-            aFilters.push(new Filter({ filters: aStatusFilters, and: false }));
-        }
-
-        // 5. FILTRADO POR FECHA
-        if (sDate && sDate !== "all") {
-            if (sDate.includes("_")) {
-                const aDates = sDate.split("_");
-                const oStart = new Date(aDates[0] + "T00:00:00");
-                const oEnd = new Date(aDates[1] + "T23:59:59");
-                aFilters.push(new Filter("VIGENCIAINI", FilterOperator.BT, oStart, oEnd));
-            } else {
-                const oDate = new Date(sDate + "T00:00:00");
-                aFilters.push(new Filter("VIGENCIAINI", FilterOperator.EQ, oDate));
-            }
-        }
-
-        // --- EJECUCIÓN OPTIMIZADA ---
-        const oTable = this.byId("tableContracts") as Table;
-        const oBinding = oTable?.getBinding("items") as ODataListBinding;
-
-        if (oBinding) {
-            oView.setBusy(true); // Bloqueamos la pantalla
-            
-            oBinding.attachEventOnce("dataReceived", () => {
-                // Una vez recibidos los contratos, ejecutamos la expansión masiva
-                // No quitamos el busy aquí, lo hará onExpandAll al terminar
-                this._updateTableStatistics();
-                setTimeout(() => {
-                    this.onExpandAll(); 
-                }, 200);
-            });
-
-            oBinding.filter(aFilters, FilterType.Application);
+    // Fecha
+    if (sDate && sDate !== "all") {
+        if (sDate.includes("_")) {
+            const [sIni, sFin] = sDate.split("_");
+            aFinalFilters.push(new Filter("VigenciaIniPos", FilterOperator.BT, sIni, sFin));
+        } else {
+            aFinalFilters.push(new Filter("VigenciaIniPos", FilterOperator.EQ, sDate));
         }
     }
+
+    // --- EJECUCIÓN ÚNICA ---
+    const oTable = this.byId("tableContracts") as Table;
+    const oBinding = oTable?.getBinding("items") as ODataListBinding;
+
+    if (oBinding) {
+        oView.setBusy(true);
+
+        // Si usaste 'suspended: true' en el XML, hay que activarlo
+        if (oBinding.isSuspended()) {
+            oBinding.resume();
+        }
+
+        // Suscribir eventos ANTES de filtrar
+        oBinding.attachEventOnce("dataReceived", () => {
+            oView.setBusy(false);
+            this._updateTableStatistics();
+            setTimeout(() => this.onExpandAll(), 200);
+        });
+
+        // Esta línea envía Cliente, Fecha y Quotation en un solo paquete $filter
+        oBinding.filter(aFinalFilters, FilterType.Application);
+    }
+}
+
+
 
     public onTogglePlanDetail(oEvent: any): void {
         const oButton = oEvent.getSource();

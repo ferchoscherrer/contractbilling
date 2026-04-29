@@ -73,24 +73,27 @@ export default class Main extends Controller {
         const oDateEnd = oDRS.getSecondDateValue();
         const aStatus = (this.byId("mcbStatus") as MultiComboBox).getSelectedKeys();
 
-        if (aCustomers.length === 0 && aQuotations.length === 0) {
-            MessageToast.show("Por favor, ingrese al menos un Cliente o un Número de Cotización.");
-            return; 
-        }
-
+        // --- VALIDACIÓN Y FORMATEO DE FECHAS ---
         let sDateRangeParam = "all";
+        
+        // Verificamos que existan ambas fechas antes de intentar formatear
         if (oDateStart && oDateEnd) {
-            sDateRangeParam = `${this._formatDate(oDateStart)}_${this._formatDate(oDateEnd)}`;
+            const sIni = this._formatDate(oDateStart);
+            const sFin = this._formatDate(oDateEnd);
+
+            // Solo si ambos formateos fueron exitosos y no devolvieron vacío
+            if (sIni !== "" && sFin !== "") {
+                sDateRangeParam = `${sIni}_${sFin}`;
+            }
         }
 
         this.oBillingContract.setProperty("/oQuery/selectedCustomers", aCustomers);
         this.oBillingContract.setProperty("/oQuery/selectedQuotations", aQuotations);
         this.oBillingContract.setProperty("/oQuery/selectedStatus", aStatus);
 
-        // --- INICIO CAMBIO PUNTO 2: GUARDAR EN SESIÓN ---
+        // Guardar en sesión para persistencia
         const oDataToSave = this.oBillingContract.getData();
         sessionStorage.setItem("lastBillingQuery", JSON.stringify(oDataToSave));
-        // --- FIN CAMBIO PUNTO 2 ---
 
         let sCustomerParam = "all";
         if (aCustomers.length === 1) {
@@ -101,18 +104,32 @@ export default class Main extends Controller {
             sCustomerParam = "all";
         }
 
+        // Navegación con parámetros limpios
         this.oRouter.navTo("RouteContractDetail", {
             customerId: sCustomerParam,
             date: sDateRangeParam
         });
     }
 
-    private _formatDate(oDate: Date): string {
+
+
+
+
+    private _formatDate(oDate: Date | null): string {
+        // Validamos que sea un objeto Date real y que no sea una fecha inválida
+        if (!(oDate instanceof Date) || isNaN(oDate.getTime())) {
+            return "";
+        }
+
         const day = ("0" + oDate.getDate()).slice(-2);
         const month = ("0" + (oDate.getMonth() + 1)).slice(-2);
         const year = oDate.getFullYear();
-        return `${year}-${month}-${day}`;
+        
+        return `${year}${month}${day}`;
     }
+
+
+
 
     public async onOpenPopUpiptCustomer(): Promise<void> {
         this.oFragmentCustomer ??= await Fragment.load({

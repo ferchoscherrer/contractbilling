@@ -23,15 +23,16 @@
                 selectionChange=".onSelectionChange"
                 alternateRowColors="true" 
                 fixedLayout="false"
-                items="{
-                    path: 'ZSD_GET_CONTRACT_BILLING_SRV>/ContractHeaderSet',
-                    sorter: {
-                        path: 'Contrato',
-                        descending: false,
-                        group: true
-                    },
-                    groupHeaderFactory: '.getGroupHeader'
-                }">
+               items="{
+        path: 'ZSD_GET_CONTRACT_BILLING_SRV>/ContractHeaderSet',
+        suspended: true, 
+        sorter: {
+            path: 'Contrato',
+            descending: false,
+            group: true
+        },
+        groupHeaderFactory: '.getGroupHeader'
+    }">
                 
                 <headerToolbar>
                     <OverflowToolbar>
