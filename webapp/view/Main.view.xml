@@ -1,0 +1,82 @@
+<mvc:View controllerName="contractbilling.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:form="sap.ui.layout.form"
+    xmlns:f="sap.f"
+    xmlns:core="sap.ui.core">
+    
+    <f:DynamicPage showFooter="true" headerExpanded="true" headerPinned="true">
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <Title text="{i18n>customerServiceFollowUp}"/>
+                </f:heading>
+            </f:DynamicPageTitle>
+        </f:title>
+
+        <f:header>
+            <f:DynamicPageHeader pinnable="false">
+                <Text text="Seleccione los criterios. Puede pegar una lista de clientes o cotizaciones desde Excel." />
+            </f:DynamicPageHeader>
+        </f:header>
+
+        <f:content>
+            <VBox class="sapUiSmallMargin">
+                <form:SimpleForm 
+                    editable="true"
+                    layout="ResponsiveGridLayout"
+                    labelSpanL="3" labelSpanM="3" emptySpanL="4" emptySpanM="4"
+                    columnsL="1" columnsM="1">
+                    
+                    <form:content>
+                        <core:Title text="{i18n>filters}" />
+                        
+                        <Label text="{i18n>customer}" labelFor="miCustomer" required="false" />
+                        <MultiInput 
+                            id="miCustomer" 
+    placeholder="Pegue desde Excel o use la ayuda de búsqueda..."
+    showValueHelp="true" 
+    valueHelpRequest=".onOpenPopUpiptCustomer"
+    enableMultiLineMode="true"
+    liveChange=".onLiveChangeMultiInput"
+    change=".onTokenUpdate" 
+    width="100%" />
+
+                        <Label text="Rango de Meses" labelFor="DRPBillingDate" />
+                        <DateRangeSelection
+                            id="DRPBillingDate"
+                            displayFormat="MM/yyyy"
+                            placeholder="Desde - Hasta" />
+
+                        <Label text="{i18n>quotationNumber}" labelFor="miQuotation" />
+                        <MultiInput 
+                            id="miQuotation"
+                            placeholder="Pegue aquí sus cotizaciones..."
+                            showValueHelp="true"
+                            enableMultiLineMode="true"
+                            liveChange=".onLiveChangeMultiInput"
+                            change=".onTokenUpdate"
+                            valueHelpRequest="onOpenPopUpQuotationNumber"
+                            width="100%"/>
+
+                        <Label text="Estatus" labelFor="mcbStatus" />
+                        <MultiComboBox id="mcbStatus">
+                            <core:Item key="LIB." text="Liberado" />
+                            <core:Item key="PEND." text="Pendiente" />
+                            <core:Item key="CONC." text="Concluido" />
+                        </MultiComboBox>
+                            
+                    </form:content>
+                </form:SimpleForm>
+            </VBox>
+        </f:content>
+
+        <f:footer>
+            <OverflowToolbar>
+                <ToolbarSpacer />
+                <Button type="Emphasized" text="{i18n>next}" press="onOpenListContract" icon="sap-icon://open-command-field" />
+                <Button type="Reject" text="{i18n>clear}" icon="sap-icon://clear-filter" press="onClearFilter" />
+            </OverflowToolbar>
+        </f:footer>
+    </f:DynamicPage>
+</mvc:View>

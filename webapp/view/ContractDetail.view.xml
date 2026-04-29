@@ -1,0 +1,244 @@
+<mvc:View controllerName="contractbilling.controller.ContractDetail"
+    xmlns:mvc="sap.ui.core.mvc" 
+    xmlns="sap.m" 
+    xmlns:f="sap.f"
+    xmlns:core="sap.ui.core">
+    <f:DynamicPage headerExpanded="true" showFooter="true">
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <Title text="Selección de Partidas para Facturar" />
+                </f:heading>
+                <f:navigationActions>
+                    <Button icon="sap-icon://nav-back" type="Transparent" press="onNavBack" />
+                </f:navigationActions>
+            </f:DynamicPageTitle>
+        </f:title>
+
+        <f:content>
+            <Table id="tableContracts" 
+                sticky="ColumnHeaders,HeaderToolbar,InfoToolbar"
+                inset="false"
+                mode="MultiSelect"
+                selectionChange=".onSelectionChange"
+                alternateRowColors="true" 
+                fixedLayout="false"
+                items="{
+                    path: 'ZSD_GET_CONTRACT_BILLING_SRV>/ContractHeaderSet',
+                    sorter: {
+                        path: 'Contrato',
+                        descending: false,
+                        group: true
+                    },
+                    groupHeaderFactory: '.getGroupHeader'
+                }">
+                
+                <headerToolbar>
+                    <OverflowToolbar>
+                        <Title text="Posiciones" />
+                        <ToolbarSpacer width="1rem" />
+
+                        <HBox alignItems="Center">
+                            <ObjectNumber number="{local>/resumen/clientes}" emphasized="true" state="Information" />
+                            <Label text="Clientes" class="sapUiTinyMarginBegin sapUiSmallMarginEnd" />
+                            
+                            <ToolbarSeparator />
+                            
+                            <ObjectNumber number="{local>/resumen/contratos}" emphasized="true" state="Information" class="sapUiSmallMarginBegin" />
+                            <Label text="Contratos" class="sapUiTinyMarginBegin sapUiSmallMarginEnd" />
+                            
+                            <ToolbarSeparator />
+                            
+                            <ObjectNumber number="{local>/resumen/posiciones}" emphasized="true" state="Success" class="sapUiSmallMarginBegin" />
+                            <Label text="Posiciones" class="sapUiTinyMarginBegin" />
+                        </HBox>
+
+                        <ToolbarSpacer />
+
+                        <Label text="Filtrar Plan (Mes):" design="Bold" required="true" />
+                        <Select id="slMonthFilter" width="10rem" change="onMonthFilterChange">
+                            <core:Item key="all" text="Todos" />
+                            <core:Item key="01" text="Enero" />
+                            <core:Item key="02" text="Febrero" />
+                            <core:Item key="03" text="Marzo" />
+                            <core:Item key="04" text="Abril" />
+                            <core:Item key="05" text="Mayo" />
+                            <core:Item key="06" text="Junio" />
+                            <core:Item key="07" text="Julio" />
+                            <core:Item key="08" text="Agosto" />
+                            <core:Item key="09" text="Septiembre" />
+                            <core:Item key="10" text="Octubre" />
+                            <core:Item key="11" text="Noviembre" />
+                            <core:Item key="12" text="Diciembre" />
+                        </Select>
+
+                        <Label text="Año:" design="Bold" required="true" class="sapUiSmallMarginBegin" />
+                        <Select id="slYearFilter" width="7rem" change="onMonthFilterChange">
+                            <core:Item key="all" text="Todos" />
+                            <core:Item key="2024" text="2024" />
+                            <core:Item key="2025" text="2025" />
+                            <core:Item key="2026" text="2026" />
+                            <core:Item key="2027" text="2027" />
+                            <core:Item key="2028" text="2028" />
+                        </Select>
+
+                        <ToolbarSeparator />
+
+                        <Button icon="sap-icon://expand-group" text="Expandir" press="onExpandSelected" type="Ghost" />
+                        <Button icon="sap-icon://collapse-group" text="Colapsar" press="onCollapseAll" type="Ghost" />
+                        
+                        <ToolbarSeparator />
+                        <Button icon="sap-icon://multiselect-all" text="Seleccionar Todo" press="onSelectAll" />
+                        <Button icon="sap-icon://multiselect-none" text="Desmarcar" press="onDeselectAll" />
+                    </OverflowToolbar>
+                </headerToolbar>
+
+                <columns>
+                    <Column width="4em" hAlign="Center"><Text text="Pos." /></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Equipo / Descripción" /></Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true" width="10em"><Text text="Vigencia" /></Column>
+                    <Column hAlign="Center" width="8em"><Text text="Estatus" /></Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true" width="12rem"><Text text="Tipo Facturación" /></Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true" width="14rem"><Text text="Estado de Facturación" /></Column>
+                    <Column hAlign="End" width="10em"><Text text="Importe" /></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true" popinDisplay="Inline">
+                        <Text text="Detalle del Plan" />
+                    </Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem vAlign="Middle">
+                        <cells>
+                            <Text text="{path: 'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato', formatter: '.formatPos'}" />
+                            
+                            <ObjectIdentifier 
+                                title="{ZSD_GET_CONTRACT_BILLING_SRV>Equipo}" 
+                                text="{ZSD_GET_CONTRACT_BILLING_SRV>Descripcion}" />
+                            
+                            <VBox> 
+                                <Text text="{
+                                    path: 'ZSD_GET_CONTRACT_BILLING_SRV>VigenciaIniPos',
+                                    type: 'sap.ui.model.type.Date',
+                                    formatOptions: { source: { pattern: 'yyyyMMdd' }, pattern: 'dd/MM/yyyy' }
+                                }" />
+                                <ObjectStatus text="{
+                                    path: 'ZSD_GET_CONTRACT_BILLING_SRV>VigenciaFinPos',
+                                    type: 'sap.ui.model.type.Date',
+                                    formatOptions: { source: { pattern: 'yyyyMMdd' }, pattern: 'dd/MM/yyyy' }
+                                }" state="Warning" />
+                            </VBox>
+                            
+                            <ObjectStatus 
+                                text="{ZSD_GET_CONTRACT_BILLING_SRV>Status}" 
+                                state="{= ${ZSD_GET_CONTRACT_BILLING_SRV>Status} === 'LIB.' ? 'Success' : 'Warning' }" />
+
+                            <HBox alignItems="Center">
+                                <core:Icon src="sap-icon://accept" color="Success" class="sapUiTinyMarginEnd" />
+                                <Text text="{= ${ZSD_GET_CONTRACT_BILLING_SRV>PosContrato} % 2 === 0 ? 'A) Adelantado' : 'B) Mes Vencido' }" />
+                            </HBox>
+
+                            <HBox alignItems="Center">
+                                <core:Icon 
+                                    src="{= (${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} / ${ZSD_GET_CONTRACT_BILLING_SRV>Total}) === 1 ? 'sap-icon://accept' : ((${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} / ${ZSD_GET_CONTRACT_BILLING_SRV>Total}) > 0.5 ? 'sap-icon://money-bills' : 'sap-icon://date-time') }"
+                                    color="{= (${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} / ${ZSD_GET_CONTRACT_BILLING_SRV>Total}) === 1 ? 'Positive' : 'Default' }"
+                                    size="1.2rem"
+                                    class="sapUiTinyMarginEnd" />
+                                <VBox width="100%">
+                                    <ProgressIndicator
+                                        percentValue="{= ${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} ? ((${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} / ${ZSD_GET_CONTRACT_BILLING_SRV>Total}) * 100) : 0 }"
+                                        displayValue="{= ${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} ? 'Progreso' : '0%' }"
+                                        showValue="true"
+                                        height="1.2rem"
+                                        state="{= ((${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} / ${ZSD_GET_CONTRACT_BILLING_SRV>Total}) * 100) > 85 ? 'Success' : 'Information' }" />
+                                </VBox>
+                            </HBox>
+                            
+                            <ObjectNumber 
+                                number="{
+                                    path: 'ZSD_GET_CONTRACT_BILLING_SRV>Total',
+                                    type: 'sap.ui.model.type.Float',
+                                    formatOptions: { minFractionDigits: 2, maxFractionDigits: 2 }
+                                }" 
+                                unit="MXN" 
+                                state="Information" />
+
+                            <VBox class="sapUiSmallMarginTop" width="100%">
+                                <Button 
+                                    text="Ver/Ocultar Plan de Facturación" 
+                                    icon="sap-icon://navigation-right-arrow"
+                                    type="Transparent"
+                                    press=".onTogglePlanDetail" 
+                                    class="sapUiTinyMarginBottom"/>
+
+                                <VBox visible="false" renderType="Bare">
+                                    <OverflowToolbar design="Info" height="2.5rem" class="sapUiTinyMarginTop">
+                                        <Label text="Mes / Año" width="10rem" class="sapUiSmallMarginBegin" design="Bold" />
+                                        <Label text="Orden" width="8rem" design="Bold" />
+                                        <Label text="Factura" width="9rem" design="Bold" />
+                                        <ToolbarSpacer />
+                                        <Label text="Estado" width="8rem" textAlign="End" design="Bold" class="sapUiSmallMarginEnd" />
+                                    </OverflowToolbar>
+
+                                    <ScrollContainer height="240px" vertical="true">
+                                        <Table inset="false" 
+                                               fixedLayout="false" 
+                                               showSeparators="Inner"
+                                               items="{path: 'local>/', templateShareable: false}"> 
+                                            <columns>
+                                                <Column width="10rem" />
+                                                <Column width="8rem" />
+                                                <Column width="9rem" />
+                                                <Column hAlign="End" width="8rem" />
+                                            </columns>
+                                            <items>
+                                                <ColumnListItem>
+                                                    <cells>
+                                                        <Label text="{
+                                                            path: 'Afdat', 
+                                                            type: 'sap.ui.model.type.Date',
+                                                            formatOptions: { source: { pattern: 'yyyyMMdd' }, pattern: 'MMM yyyy' }
+                                                        }" design="Bold"/>
+                                                        <Text text="{= ${Contrato} ? ${Contrato} : '---' }"/>
+                                                        <Link text="{Fakwr}" visible="{= !!${Fakwr} }" />
+                                                        <ObjectStatus 
+                                                            text="{= ${Factura} === 'C' ? 'FACTURADO' : 'PENDIENTE' }" 
+                                                            state="{= ${Factura} === 'C' ? 'Success' : 'Warning' }"
+                                                            icon="{= ${Factura} === 'C' ? 'sap-icon://accept' : 'sap-icon://alert' }"/>
+                                                    </cells>
+                                                </ColumnListItem>
+                                            </items>
+                                        </Table>
+                                    </ScrollContainer>
+                                </VBox>
+                            </VBox>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </f:content>
+
+        <f:footer>
+            <OverflowToolbar>
+                <ToolbarSpacer />
+                <HBox alignItems="Center" class="sapUiMediumMarginEnd">
+                    <Text id="txtSelectionInfo" text="Sin partidas seleccionadas" class="sapUiSmallMarginEnd" />
+                    <Title 
+                        id="txtTotalSelected" 
+                        text="" 
+                        level="H4" 
+                        titleStyle="H4" 
+                        visible="false"
+                        class="sapUiSmallMarginEnd" />
+                </HBox>
+                <Button 
+                    id="btnProcess"
+                    type="Accept" 
+                    text="Generar Factura Masiva" 
+                    icon="sap-icon://create-entry-short" 
+                    press="onProcessBilling"
+                    enabled="false" />
+                <ToolbarSpacer width="1rem" />
+            </OverflowToolbar>
+        </f:footer>
+    </f:DynamicPage>
+</mvc:View>

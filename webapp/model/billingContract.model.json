@@ -1,0 +1,23 @@
+{
+    "oQuery":{
+        "selectCustomer": null,
+        "selectQuotationNumber": null,
+        "quotationByCustomer": null,
+        "quotationByCustomerList": null
+    },
+    "contractList":{
+        "header": {
+            "pattern": null,
+            "customer": null,
+            "globalDebt": null
+        },
+        "items" : [],
+        "subItemsByItem" : [],
+        "equipementBySubItems": []
+    },
+    "config": {
+        "bSpliter": false,
+        "firtsSpliterSize": "100%",
+        "secondSpliterSize": "0%"
+    }
+}

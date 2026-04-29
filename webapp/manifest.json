@@ -1,0 +1,168 @@
+{
+  "_version": "1.83.0",
+  "sap.app": {
+    "id": "contractbilling",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:basic",
+      "version": "1.22.0",
+      "toolsId": "6f946664-83e5-4c6a-85da-01d7525a04f6"
+    },
+    "dataSources": {
+      "billingContract": {
+        "uri": "model/billingContract.model.json",
+        "type": "JSON"
+      },
+      "ZSD_CATALOGOS_SRV": {
+        "uri": "sap/opu/odata/sap/ZSD_CATALOGOS_SRV?sap-language=es",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/metadata.xml",
+          "odataVersion": "2.0"
+        }
+      },
+      "ZSD_GET_CONTRACT_BILLING_SRV": {
+        "uri": "sap/opu/odata/sap/ZSD_GET_CONTRACT_BILLING_SRV?sap-language=es",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/metadata.xml",
+          "odataVersion": "2.0"
+        }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "contractbilling-Display": {
+          "semanticObject": "contractbilling",
+          "action": "Display",
+          "title": "{{contractbilling-Display.flpTitle}}",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.146.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "contractbilling.i18n.i18n"
+        }
+      },
+      "mBillingContract": {
+        "dataSource": "billingContract",
+        "type": "sap.ui.model.json.JSONModel"
+      },
+      "ZSD_CATALOGOS_SRV": {
+        "dataSource": "ZSD_CATALOGOS_SRV",
+        "preload": true,
+        "settings": {
+          "useBatch": true
+        }
+      },
+      "ZSD_GET_CONTRACT_BILLING_SRV": {
+        "dataSource": "ZSD_GET_CONTRACT_BILLING_SRV",
+        "preload": true,
+        "settings": {
+          "useBatch": true
+        }
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "controlAggregation": "pages",
+        "controlId": "app",
+        "transition": "slide",
+        "type": "View",
+        "viewType": "XML",
+        "path": "contractbilling.view",
+        "async": true,
+        "viewPath": "contractbilling.view"
+      },
+      "routes": [
+        {
+          "name": "RouteMain",
+          "pattern": ":?query:",
+          "target": [
+            "TargetMain"
+          ]
+        },
+        {
+          "name": "RouteContractDetail",
+          "pattern": "ContractDetail/{customerId}/{date}",
+          "target": [
+            "TargetContractDetail"
+          ]
+        }
+      ],
+      "targets": {
+        "TargetMain": {
+          "id": "Main",
+          "name": "Main"
+        },
+        "TargetContractDetail": {
+          "id": "ContractDetail",
+          "name": "ContractDetail"
+        }
+      }
+    },
+    "rootView": {
+      "viewName": "contractbilling.view.App",
+      "type": "XML",
+      "id": "App",
+      "async": true
+    }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "contractbilling"
+  }
+}
