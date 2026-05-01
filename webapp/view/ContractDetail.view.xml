@@ -23,16 +23,16 @@
                 selectionChange=".onSelectionChange"
                 alternateRowColors="true" 
                 fixedLayout="false"
-               items="{
-        path: 'ZSD_GET_CONTRACT_BILLING_SRV>/ContractHeaderSet',
-        suspended: true, 
-        sorter: {
-            path: 'Contrato',
-            descending: false,
-            group: true
-        },
-        groupHeaderFactory: '.getGroupHeader'
-    }">
+                items="{
+                    path: 'ZSD_GET_CONTRACT_BILLING_SRV>/ContractHeaderSet',
+                    suspended: true, 
+                    sorter: {
+                        path: 'Contrato',
+                        descending: false,
+                        group: true
+                    },
+                    groupHeaderFactory: '.getGroupHeader'
+                }">
                 
                 <headerToolbar>
                     <OverflowToolbar>
@@ -89,8 +89,8 @@
                         <Button icon="sap-icon://collapse-group" text="Colapsar" press="onCollapseAll" type="Ghost" />
                         
                         <ToolbarSeparator />
-                        <Button icon="sap-icon://multiselect-all" text="Seleccionar Todo" press="onSelectAll" />
-                        <Button icon="sap-icon://multiselect-none" text="Desmarcar" press="onDeselectAll" />
+                        <Button icon="sap-icon://multiselect-all" text="Seleccionar Todo" press="onSelectAll" visible="false" />
+                        <Button icon="sap-icon://multiselect-none" text="Desmarcar" press="onDeselectAll" visible="false" />
                     </OverflowToolbar>
                 </headerToolbar>
 
@@ -133,10 +133,18 @@
                                 text="{ZSD_GET_CONTRACT_BILLING_SRV>Status}" 
                                 state="{= ${ZSD_GET_CONTRACT_BILLING_SRV>Status} === 'LIB.' ? 'Success' : 'Warning' }" />
 
-                            <HBox alignItems="Center">
-                                <core:Icon src="sap-icon://accept" color="Success" class="sapUiTinyMarginEnd" />
-                                <Text text="{= ${ZSD_GET_CONTRACT_BILLING_SRV>PosContrato} % 2 === 0 ? 'A) Adelantado' : 'B) Mes Vencido' }" />
-                            </HBox>
+                            <!-- Celda de Tipo y Frecuencia de Facturación -->
+                            <VBox>
+                                <HBox alignItems="Center">
+                                    <core:Icon src="sap-icon://accept" color="Success" class="sapUiTinyMarginEnd" size="0.8rem"/>
+                                    <Text text="{= ${ZSD_GET_CONTRACT_BILLING_SRV>TipoFacturacion}.indexOf('|') !== -1 ? ${ZSD_GET_CONTRACT_BILLING_SRV>TipoFacturacion}.split('|')[1].trim() : ${ZSD_GET_CONTRACT_BILLING_SRV>TipoFacturacion} }" />
+                                </HBox>
+                                <HBox alignItems="Center">
+                                    <core:Icon src="sap-icon://calendar" color="Default" class="sapUiTinyMarginEnd" size="0.8rem"/>
+                                    <Text text="{= ${ZSD_GET_CONTRACT_BILLING_SRV>FreqFacturacion}.indexOf('|') !== -1 ? ${ZSD_GET_CONTRACT_BILLING_SRV>FreqFacturacion}.split('|')[1].trim() : ${ZSD_GET_CONTRACT_BILLING_SRV>FreqFacturacion} }" 
+                                          visible="{= !!${ZSD_GET_CONTRACT_BILLING_SRV>FreqFacturacion} }" />
+                                </HBox>
+                            </VBox>
 
                             <HBox alignItems="Center">
                                 <core:Icon 
@@ -146,11 +154,32 @@
                                     class="sapUiTinyMarginEnd" />
                                 <VBox width="100%">
                                     <ProgressIndicator
-                                        percentValue="{= ${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} ? ((${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} / ${ZSD_GET_CONTRACT_BILLING_SRV>Total}) * 100) : 0 }"
-                                        displayValue="{= ${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} ? 'Progreso' : '0%' }"
-                                        showValue="true"
-                                        height="1.2rem"
-                                        state="{= ((${ZSD_GET_CONTRACT_BILLING_SRV>Facturado} / ${ZSD_GET_CONTRACT_BILLING_SRV>Total}) * 100) > 85 ? 'Success' : 'Information' }" />
+                                        percentValue="{
+        parts: [
+            'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
+            'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
+            'local>/planesDetalle'
+        ],
+        formatter: '.formatProgressFromPlan'
+    }"
+    displayValue="{
+        parts: [
+            'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
+            'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
+            'local>/planesDetalle'
+        ],
+        formatter: '.formatProgressText'
+    }"
+    showValue="true"
+    height="1.2rem"
+    state="{
+        parts: [
+            'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
+            'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
+            'local>/planesDetalle'
+        ],
+        formatter: '.formatProgressState'
+    }" />
                                 </VBox>
                             </HBox>
                             

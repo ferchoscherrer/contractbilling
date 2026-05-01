@@ -1,0 +1,67 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:layout="sap.ui.layout">
+    <Dialog id="confirmBillingDialog" title="Confirmación de Facturación" contentWidth="700px">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <!-- Información del Periodo -->
+                <HBox alignItems="Center" class="sapUiSmallMarginBottom">
+                    <core:Icon src="sap-icon://calendar" class="sapUiTinyMarginEnd" color="Default" />
+                    <Label text="Periodo a facturar:" design="Bold" class="sapUiTinyMarginEnd" />
+                    <Text text="{local>/mesFacturarLabel}" />
+                </HBox>
+
+                <!-- Texto Dinámico según cantidad de clientes -->
+                <MessageStrip
+                    text="{local>/confirmHeaderText}"
+                    type="Information"
+                    showIcon="true"
+                    showCloseButton="false"
+                    class="sapUiSmallMarginBottom" />
+                
+                <Table items="{local>/resumenFacturacion}" sticky="ColumnHeaders">
+                    <columns>
+                        <Column width="35%"><Text text="Cliente" /></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Contratos involucrados" /></Column>
+                        <Column hAlign="Center" width="15%"><Text text="Partidas" /></Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem vAlign="Middle">
+                            <cells>
+                                <ObjectIdentifier title="{local>NombreCliente}" text="{local>Cliente}" />
+                                <Text text="{local>DetalleContratos}" wrapping="true" />
+                                <ObjectStatus 
+                                    text="{local>CantPosiciones}" 
+                                    state="Success" 
+                                    />
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+
+                <MessageStrip
+                    visible="{= !!${local>/msgExclusiones} }"
+                    text="Atención: Las posiciones ya facturadas detectadas en el plan han sido excluidas automáticamente."
+                    type="Warning"
+                    showIcon="true"
+                    class="sapUiSmallMarginTop" />
+            </VBox>
+        </content>
+        <beginButton>
+            <!-- El botón de Factura Global solo tiene sentido si hay múltiples contratos o clientes -->
+            <Button 
+                text="Factura Global" 
+                type="Emphasized" 
+                press="onConfirmGlobalBilling" 
+                visible="{local>/isMultiCliente}" />
+        </beginButton>
+        <buttons>
+            <Button 
+                text="{= ${local>/isMultiCliente} ? 'Por Contrato' : 'Procesar Facturación' }" 
+                type="{= ${local>/isMultiCliente} ? 'Default' : 'Emphasized' }" 
+                press="onConfirmIndividualBilling" />
+            <Button text="Cancelar" type="Transparent" press="onCloseConfirmDialog" />
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

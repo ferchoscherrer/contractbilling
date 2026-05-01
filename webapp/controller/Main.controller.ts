@@ -65,7 +65,7 @@ export default class Main extends Controller {
         }
     }
 
-    public onOpenListContract(): void {
+   public onOpenListContract(): void {
         const aCustomers = (this.byId("miCustomer") as MultiInput).getTokens().map(t => t.getKey());
         const aQuotations = (this.byId("miQuotation") as MultiInput).getTokens().map(t => t.getKey());
         const oDRS = this.byId("DRPBillingDate") as DateRangeSelection;
@@ -75,42 +75,39 @@ export default class Main extends Controller {
 
         // --- VALIDACIÓN Y FORMATEO DE FECHAS ---
         let sDateRangeParam = "all";
-        
-        // Verificamos que existan ambas fechas antes de intentar formatear
         if (oDateStart && oDateEnd) {
             const sIni = this._formatDate(oDateStart);
             const sFin = this._formatDate(oDateEnd);
-
-            // Solo si ambos formateos fueron exitosos y no devolvieron vacío
             if (sIni !== "" && sFin !== "") {
                 sDateRangeParam = `${sIni}_${sFin}`;
             }
         }
 
+        // Actualizar modelo local
         this.oBillingContract.setProperty("/oQuery/selectedCustomers", aCustomers);
         this.oBillingContract.setProperty("/oQuery/selectedQuotations", aQuotations);
         this.oBillingContract.setProperty("/oQuery/selectedStatus", aStatus);
 
-        // Guardar en sesión para persistencia
-        const oDataToSave = this.oBillingContract.getData();
-        sessionStorage.setItem("lastBillingQuery", JSON.stringify(oDataToSave));
-
+        // Lógica de parámetro de cliente
         let sCustomerParam = "all";
         if (aCustomers.length === 1) {
             sCustomerParam = aCustomers[0];
         } else if (aCustomers.length > 1) {
             sCustomerParam = "multi";
-        } else if (aCustomers.length === 0 && aQuotations.length > 0) {
-            sCustomerParam = "all";
         }
 
-        // Navegación con parámetros limpios
+        // --- NAVEGACIÓN CON QUERY PARAMETERS PARA F5 ---
         this.oRouter.navTo("RouteContractDetail", {
             customerId: sCustomerParam,
-            date: sDateRangeParam
+            date: sDateRangeParam,
+            // El objeto query se traduce a ?status=...&quotation=... en la URL
+            query: {
+                status: aStatus.join(","),
+                quotation: aQuotations.join(","),
+                customers: aCustomers.join(",")
+            }
         });
     }
-
 
 
 

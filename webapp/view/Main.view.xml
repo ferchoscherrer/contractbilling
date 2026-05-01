@@ -59,8 +59,8 @@
                             valueHelpRequest="onOpenPopUpQuotationNumber"
                             width="100%"/>
 
-                        <Label text="Estatus" labelFor="mcbStatus" />
-                        <MultiComboBox id="mcbStatus">
+                        <Label text="Estatus" labelFor="mcbStatus" visible="false" />
+                        <MultiComboBox visible="false" id="mcbStatus">
                             <core:Item key="LIB." text="Liberado" />
                             <core:Item key="PEND." text="Pendiente" />
                             <core:Item key="CONC." text="Concluido" />

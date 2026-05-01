@@ -27,6 +27,8 @@ import Select from "sap/m/Select";
 import ScrollContainer from "sap/m/ScrollContainer";
 import BusyDialog from "sap/m/BusyDialog";
 import StepInput from "sap/m/StepInput";
+import Dialog from "sap/m/Dialog";
+import Fragment from "sap/ui/core/Fragment";
 
 /**
  * @namespace contractbilling.controller
@@ -35,6 +37,10 @@ export default class ContractDetail extends Controller {
 
     private _iPendingRequests: number = 0;
     private _oBusyDialog: BusyDialog;
+   
+    private _oConfirmDialog: any;
+private _aItemsToProcess: any[];
+    
 
     public onInit(): void {
         const oComponent = this.getOwnerComponent() as UIComponent;
@@ -91,22 +97,37 @@ private _onObjectMatched(oEvent: any): void {
     const oView = this.getView();
     if (!oView) return;
 
+    // --- REINICIO DE ESTADOS (Limpieza anterior) ---
+    oView.setBusy(false); 
+    this._iPendingRequests = 0;
+    if (this._oBusyDialog) { this._oBusyDialog.close(); }
+    const oLocalModel = oView.getModel("local") as JSONModel;
+    oLocalModel.setProperty("/planesDetalle", {});
+
+    // --- LEER PARÁMETROS DE LA URL ---
     const oArgs = oEvent.getParameter("arguments");
     const sCustomer = oArgs.customerId;
     const sDate = oArgs.date;
-    
-    // 1. Array único de filtros
-    const aFinalFilters: Filter[] = [];
+    const oQuery = oArgs["?query"]; // Parámetros opcionales del F5
 
-    // Recuperar modelo de petición
+    // Recuperar y restaurar modelo de petición
     const oModelPeticion = this.getOwnerComponent()?.getModel("mBillingContract") as JSONModel;
+    
+    if (oQuery && oModelPeticion) {
+        // Si hay datos en la URL (F5), los reinyectamos al modelo
+        if (oQuery.status) oModelPeticion.setProperty("/oQuery/selectedStatus", oQuery.status.split(","));
+        if (oQuery.quotation) oModelPeticion.setProperty("/oQuery/selectedQuotations", oQuery.quotation.split(","));
+        if (oQuery.customers) oModelPeticion.setProperty("/oQuery/selectedCustomers", oQuery.customers.split(","));
+    }
+
+    // Ahora leemos del modelo (que ya tiene los datos del F5 si aplica)
     const aSelectedCustomers = oModelPeticion?.getProperty("/oQuery/selectedCustomers") || [];
     const aSelectedQuotations = oModelPeticion?.getProperty("/oQuery/selectedQuotations") || [];
     const aSelectedStatus = oModelPeticion?.getProperty("/oQuery/selectedStatus") || [];
 
-    // --- AGREGAR FILTROS AL ARRAY ÚNICO ---
+    const aFinalFilters: Filter[] = [];
 
-    // Clientes
+    // --- FILTROS DE CLIENTE ---
     if (sCustomer === "multi" && aSelectedCustomers.length > 0) {
         aFinalFilters.push(new Filter({
             filters: aSelectedCustomers.map((id: string) => new Filter("Cliente", FilterOperator.EQ, id)),
@@ -116,7 +137,7 @@ private _onObjectMatched(oEvent: any): void {
         aFinalFilters.push(new Filter("Cliente", FilterOperator.EQ, sCustomer));
     }
 
-    // Cotizaciones (Quotation)
+    // --- FILTROS DE COTIZACIÓN ---
     if (aSelectedQuotations.length > 0) {
         aFinalFilters.push(new Filter({
             filters: aSelectedQuotations.map((id: string) => new Filter("Contrato", FilterOperator.EQ, id)),
@@ -124,7 +145,7 @@ private _onObjectMatched(oEvent: any): void {
         }));
     }
 
-    // Status
+    // --- FILTROS DE ESTATUS ---
     if (aSelectedStatus.length > 0) {
         aFinalFilters.push(new Filter({
             filters: aSelectedStatus.map((key: string) => new Filter("Status", FilterOperator.EQ, key)),
@@ -132,7 +153,7 @@ private _onObjectMatched(oEvent: any): void {
         }));
     }
 
-    // Fecha
+    // --- FILTRO DE FECHA ---
     if (sDate && sDate !== "all") {
         if (sDate.includes("_")) {
             const [sIni, sFin] = sDate.split("_");
@@ -142,26 +163,20 @@ private _onObjectMatched(oEvent: any): void {
         }
     }
 
-    // --- EJECUCIÓN ÚNICA ---
+    // --- EJECUCIÓN DEL BINDING ---
     const oTable = this.byId("tableContracts") as Table;
     const oBinding = oTable?.getBinding("items") as ODataListBinding;
 
     if (oBinding) {
         oView.setBusy(true);
+        if (oBinding.isSuspended()) oBinding.resume();
 
-        // Si usaste 'suspended: true' en el XML, hay que activarlo
-        if (oBinding.isSuspended()) {
-            oBinding.resume();
-        }
-
-        // Suscribir eventos ANTES de filtrar
         oBinding.attachEventOnce("dataReceived", () => {
             oView.setBusy(false);
             this._updateTableStatistics();
             setTimeout(() => this.onExpandAll(), 200);
         });
 
-        // Esta línea envía Cliente, Fecha y Quotation en un solo paquete $filter
         oBinding.filter(aFinalFilters, FilterType.Application);
     }
 }
@@ -193,66 +208,68 @@ private _onObjectMatched(oEvent: any): void {
     }
 
 private _fetchBillingPlan(oContext: any, oContainer: any): void {
-        const oView = this.getView();
-        const oModel = oView?.getModel("ZSD_GET_CONTRACT_BILLING_SRV") as ODataModel;
-        const oLocalModel = oView?.getModel("local") as JSONModel;
-        const oEntry = oContext.getObject();
-        
-        oContainer.setBusy(true);
+    const oView = this.getView();
+    const oModel = oView?.getModel("ZSD_GET_CONTRACT_BILLING_SRV") as ODataModel;
+    const oLocalModel = oView?.getModel("local") as JSONModel;
+    const oEntry = oContext.getObject();
+    
+    oContainer.setBusy(true);
 
-        const oPayload = {
-            "IdPeticion": "FETCH_PLAN_" + oEntry.Contrato + "_" + oEntry.PosContrato,
-            "BillingPlanRequestSet": [{ "Contrato": oEntry.Contrato, "PosContrato": oEntry.PosContrato }],
-            "BillingPlanItemsSet": [] 
-        };
+    const oPayload = {
+        "IdPeticion": "FETCH_PLAN_" + oEntry.Contrato + "_" + oEntry.PosContrato,
+        "BillingPlanRequestSet": [{ "Contrato": oEntry.Contrato, "PosContrato": oEntry.PosContrato }],
+        "BillingPlanItemsSet": [] 
+    };
 
-        const sKey = oEntry.Contrato + "_" + oEntry.PosContrato;
+    const sKey = oEntry.Contrato + "_" + oEntry.PosContrato;
 
-        oModel.create("/BillingPlanSet", oPayload, {
-            // Importante: Usar un ID único por petición para evitar el error 500 de Changesets
-            groupId: "changeset_" + sKey, 
-            success: (oData: any) => {
-                this._finalizeRequest(oContainer); // Gestión de contador
-                const aPlanItems = oData.BillingPlanItemsSet?.results || [];
+    oModel.create("/BillingPlanSet", oPayload, {
+        groupId: "changeset_" + sKey, 
+        success: (oData: any) => {
+            this._finalizeRequest(oContainer); 
+            const aPlanItems = oData.BillingPlanItemsSet?.results || [];
 
-                if (aPlanItems.length > 0) {
-                    oLocalModel.setProperty("/planesDetalle/" + sKey, aPlanItems);
-                    oLocalModel.setProperty("/planesDetalle/" + sKey + "_Loaded", true);
+            if (aPlanItems.length > 0) {
+                // 1. Seteamos los datos en el modelo local
+                oLocalModel.setProperty("/planesDetalle/" + sKey, aPlanItems);
+                oLocalModel.setProperty("/planesDetalle/" + sKey + "_Loaded", true);
 
-                    const oScroll = oContainer.getItems()[1];
-                    const oTableDetalle = oScroll.getContent()[0] as Table; 
+                // 2. FORZAR ACTUALIZACIÓN (Casting a 'any' para evitar error ts2339)
+                (oLocalModel as any).checkUpdate(true);
 
-                    if (oTableDetalle && typeof oTableDetalle.bindItems === "function") {
-                        oTableDetalle.bindItems({
-                            path: "local>/planesDetalle/" + sKey,
-                            template: new ColumnListItem({
-                                cells: [
-                                    new Label({ design: "Bold", text: { path: "local>Afdat", type: new (DateType as any)({ source: { pattern: "yyyyMMdd" } }, { pattern: "MMM yyyy" }) } }),
-                                    new Text({ text: "{= ${local>Vbeln} ? ${local>Vbeln} : '---' }" }),
-                                    new Link({ text: "{local>Factura}", visible: "{= !!${local>Factura} }" }),
-                                    new ObjectStatus({ 
-                                        text: "{= ${local>Factura}  ? 'FACTURADO' : 'PENDIENTE' }",
-                                        state: "{= ${local>Factura} ? 'Success' : 'Warning' }",
-                                        icon: "{= ${local>Factura}  ? 'sap-icon://accept' : 'sap-icon://alert' }"
-                                    })
-                                ]
-                            }),
-                            templateShareable: false
-                        });
+                const oScroll = oContainer.getItems()[1];
+                const oTableDetalle = oScroll.getContent()[0] as Table; 
 
-                        const sCurrentMonth = (this.byId("slMonthFilter") as Select).getSelectedKey();
-                        this._applyPlanLocalFilter(oTableDetalle.getBinding("items"), sCurrentMonth);
-                        oTableDetalle.setFixedLayout(false);
-                    }
+                if (oTableDetalle && typeof oTableDetalle.bindItems === "function") {
+                    oTableDetalle.bindItems({
+                        path: "local>/planesDetalle/" + sKey,
+                        template: new ColumnListItem({
+                            cells: [
+                                new Label({ design: "Bold", text: { path: "local>Afdat", type: new (DateType as any)({ source: { pattern: "yyyyMMdd" } }, { pattern: "MMM yyyy" }) } }),
+                                new Text({ text: "{= ${local>Vbeln} ? ${local>Vbeln} : '---' }" }),
+                                new Link({ text: "{local>Factura}", visible: "{= !!${local>Factura} }" }),
+                                new ObjectStatus({ 
+                                    text: "{= ${local>Factura}  ? 'FACTURADO' : 'PENDIENTE' }",
+                                    state: "{= ${local>Factura} ? 'Success' : 'Warning' }",
+                                    icon: "{= ${local>Factura}  ? 'sap-icon://accept' : 'sap-icon://alert' }"
+                                })
+                            ]
+                        }),
+                        templateShareable: false
+                    });
+
+                    const sCurrentMonth = (this.byId("slMonthFilter") as Select).getSelectedKey();
+                    this._applyPlanLocalFilter(oTableDetalle.getBinding("items"), sCurrentMonth);
+                    oTableDetalle.setFixedLayout(false);
                 }
-            },
-            error: (oError: any) => {
-                this._finalizeRequest(oContainer);
-                console.error("Error OData:", oError);
             }
-        });
-    }
-
+        },
+        error: (oError: any) => {
+            this._finalizeRequest(oContainer);
+            console.error("Error OData:", oError);
+        }
+    });
+}
 
 
 
@@ -359,14 +376,25 @@ public onCollapseAll(): void {
         (this.byId("tableContracts") as Table).removeSelections(true);
     }
 
-    public onNavBack(): void {
-        const oHistory = History.getInstance();
-        if (oHistory.getPreviousHash() !== undefined) {
-            window.history.go(-1);
-        } else {
-            (this.getOwnerComponent() as UIComponent)?.getRouter().navTo("RouteMain", {}, true);
-        }
+   public onNavBack(): void {
+    // 1. Forzar el cierre del BusyDialog si existe
+    if (this._oBusyDialog) {
+        this._oBusyDialog.close();
     }
+    
+    // 2. Quitar el estado busy de la vista
+    this.getView()?.setBusy(false);
+
+    // 3. Resetear contadores internos
+    this._iPendingRequests = 0;
+
+    const oHistory = History.getInstance();
+    if (oHistory.getPreviousHash() !== undefined) {
+        window.history.go(-1);
+    } else {
+        (this.getOwnerComponent() as UIComponent)?.getRouter().navTo("RouteMain", {}, true);
+    }
+}
 
     public getSelectedContracts(): any[] {
         const oTable = this.byId("tableContracts") as Table;
@@ -398,7 +426,7 @@ public onCollapseAll(): void {
      * si desea factura global o por contrato si hay múltiples contratos.
      */
 
-   public onProcessBilling(): void {
+   public async onProcessBilling(): Promise<void> {
     const oTable = this.byId("tableContracts") as Table;
     const aSelectedItems = oTable.getSelectedItems();
     
@@ -407,91 +435,158 @@ public onCollapseAll(): void {
         return; 
     }
 
-    const sMonth = (this.byId("slMonthFilter") as Select).getSelectedKey();
-    const sYear = (this.byId("slYearFilter") as Select).getSelectedKey();
+    const oMonthSelect = this.byId("slMonthFilter") as Select;
+    const oYearSelect = this.byId("slYearFilter") as Select;
+    const sMonth = oMonthSelect.getSelectedKey();
+    const sYear = oYearSelect.getSelectedKey();
 
     if (sMonth === "all" || sYear === "all") {
         MessageBox.warning("Para procesar la factura, debe seleccionar un MES y un AÑO específicos.");
         return;
     }
 
+    this.getView()?.setBusy(true);
+
     const oLocalModel = this.getView()?.getModel("local") as JSONModel;
     const aDataToProcess: any[] = [];
     const aAlreadyBilled: string[] = [];
+    const aRejectedByRule: string[] = [];
 
-    aSelectedItems.forEach((oItem: any) => {
+    // 1. Filtrado de posiciones (Reglas de Negocio + Facturación previa)
+    for (const oItem of aSelectedItems) {
         const oContext = oItem.getBindingContext("ZSD_GET_CONTRACT_BILLING_SRV");
-        const oData = oContext.getObject();
+        
+        // --- SOLUCIÓN AL ERROR TS(18048): Validación de existencia de oContext ---
+        if (!oContext) {
+            continue; 
+        }
+
+        const oData = oContext.getObject() as any;
         const sKey = oData.Contrato + "_" + oData.PosContrato;
         
-        // Obtenemos el plan del modelo local
-        const aPlan = oLocalModel.getProperty("/planesDetalle/" + sKey) || [];
+        // --- ASEGURAR CARGA DEL PLAN ---
+        let aPlan = oLocalModel.getProperty("/planesDetalle/" + sKey);
+        if (!aPlan || aPlan.length === 0) {
+            await this._forceLoadPlan(oContext);
+            aPlan = oLocalModel.getProperty("/planesDetalle/" + sKey) || [];
+        }
 
-        // Buscamos la línea exacta
+        // --- REGLA: MES VENCIDO SIN ORDEN ---
+        const sTipoFact = oData.TipoFacturacion.includes("|") ? oData.TipoFacturacion.split("|")[1].trim() : oData.TipoFacturacion;
+        if (sTipoFact.toUpperCase().includes("VENCIDO")) {
+            const bTieneOrden = aPlan.some((oLine: any) => 
+                (oLine.Vbeln && oLine.Vbeln.trim() !== "" && oLine.Vbeln !== "---") || 
+                (oLine.Factura && oLine.Factura.trim() !== "")
+            );
+
+            if (!bTieneOrden) {
+                aRejectedByRule.push(`- Contrato: ${oData.Contrato}, Pos: ${this.formatPos(oData.PosContrato)} (Sin Orden de Servicio)`);
+                oTable.setSelectedItem(oItem, false);
+                continue;
+            }
+        }
+
+        // --- VALIDACIÓN DE FACTURACIÓN PREVIA ---
         const oPlanMesAnio = aPlan.find((oLine: any) => {
             if (!oLine.Afdat) return false;
             return oLine.Afdat.substring(0, 4) === sYear && oLine.Afdat.substring(4, 6) === sMonth;
         });
 
-        // LOGICA DE DECISIÓN REFORZADA:
-        // Solo excluimos si encontramos el registro Y tiene un folio de factura real.
-        const bTieneFactura = oPlanMesAnio && 
-                             oPlanMesAnio.Factura 
+        const bTieneFactura = oPlanMesAnio && oPlanMesAnio.Factura;
 
         if (bTieneFactura) {
             aAlreadyBilled.push(`- Contrato: ${oData.Contrato}, Pos: ${this.formatPos(oData.PosContrato)}`);
         } else {
             aDataToProcess.push(oData);
         }
-    });
+    }
 
-    // Validamos si quedó algo para procesar
+    this.getView()?.setBusy(false);
+
+    // Mensaje de advertencia si hubo rechazos por regla de negocio
+    if (aRejectedByRule.length > 0) {
+        await new Promise((resolve) => {
+            MessageBox.error("Las siguientes posiciones se omitieron por ser 'Mes Vencido' sin Orden de Servicio:\n\n" + aRejectedByRule.join("\n"), {
+                onClose: resolve
+            });
+        });
+    }
+
     if (aDataToProcess.length === 0) {
-        MessageBox.error(`Todas las posiciones seleccionadas ya aparecen como facturadas para ${sMonth}/${sYear} en el detalle.`);
+        if (aAlreadyBilled.length > 0) {
+            MessageBox.error(`Todas las posiciones seleccionadas ya aparecen como facturadas para ${sMonth}/${sYear}.`);
+        }
         return;
     }
 
-    // --- VALIDACIÓN DE CLIENTE ÚNICO ---
-    const aUniqueCustomerNames = [...new Set(aDataToProcess.map(oItem => oItem.NombreCliente || oItem.Cliente))];
-    if (aUniqueCustomerNames.length > 1) {
-        MessageBox.error("No se pueden mezclar clientes. Seleccione solo posiciones de: " + aUniqueCustomerNames[0]);
-        return;
-    }
+    // 2. AGRUPACIÓN POR CLIENTE CON DETALLE DE CONTRATOS
+    const mGroups = aDataToProcess.reduce((acc: any, item: any) => {
+        const sKey = item.Cliente;
+        if (!acc[sKey]) {
+            acc[sKey] = {
+                Cliente: sKey,
+                NombreCliente: item.NombreCliente,
+                ContratosSet: new Set(),
+                Posiciones: 0,
+                Items: []
+            };
+        }
+        acc[sKey].ContratosSet.add(item.Contrato);
+        acc[sKey].Posiciones++;
+        acc[sKey].Items.push(item);
+        return acc;
+    }, {});
 
-    const aUniqueContracts = [...new Set(aDataToProcess.map(oItem => oItem.Contrato))];
-    const sFirstCustomerName = aUniqueCustomerNames[0];
+    const aSummary = Object.values(mGroups).map((oGroup: any) => ({
+        Cliente: oGroup.Cliente,
+        NombreCliente: oGroup.NombreCliente,
+        CantContratos: oGroup.ContratosSet.size,
+        CantPosiciones: oGroup.Posiciones,
+        DetalleContratos: Array.from(oGroup.ContratosSet).join(", "),
+        Items: oGroup.Items
+    }));
 
-    // Mensaje de advertencia de exclusiones
-    let sExclusionMsg = "";
-    if (aAlreadyBilled.length > 0) {
-        sExclusionMsg = `\n\n⚠️ *Omitidas (ya facturadas en ${sMonth}/${sYear}):*\n${aAlreadyBilled.join("\n")}`;
-    }
+    // 3. CONFIGURACIÓN DINÁMICA PARA EL FRAGMENTO
+    const bMultiCliente = aSummary.length > 1;
+    const sHeaderText = bMultiCliente 
+        ? "Se han seleccionado partidas de múltiples clientes. Revise el resumen:" 
+        : `Resumen de facturación para el cliente ${aSummary[0].NombreCliente}:`;
 
-    // Mostrar confirmación final
-    if (aUniqueContracts.length > 1) {
-        const sMsgMulti = `Se facturarán ${aDataToProcess.length} posiciones (${aUniqueContracts.length} contratos) para ${sFirstCustomerName}.${sExclusionMsg}\n\n¿Desea Factura Global o Individual por Contrato?`;
+    const sMesTxt = oMonthSelect.getSelectedItem()?.getText() || "";
 
-        MessageBox.show(sMsgMulti, {
-            icon: MessageBox.Icon.QUESTION,
-            title: "Confirmar Proceso Masivo",
-            actions: ["Factura Global", "Por Contrato", MessageBox.Action.CANCEL],
-            emphasizedAction: "Factura Global",
-            onClose: (sAction: string | null) => {
-                if (sAction === "Factura Global") this._sendToBackend(aDataToProcess, "G");
-                else if (sAction === "Por Contrato") this._sendToBackend(aDataToProcess, "I");
-            }
+    oLocalModel.setProperty("/resumenFacturacion", aSummary);
+    oLocalModel.setProperty("/confirmHeaderText", sHeaderText);
+    oLocalModel.setProperty("/mesFacturarLabel", `${sMesTxt} ${sYear}`);
+    oLocalModel.setProperty("/isMultiCliente", bMultiCliente);
+    oLocalModel.setProperty("/totalPartidasAFacturar", aDataToProcess.length);
+    oLocalModel.setProperty("/msgExclusiones", aAlreadyBilled.length > 0 ? aAlreadyBilled.join("\n") : "");
+
+    // 4. LLAMADA A LA VENTANA NUEVA (Fragment)
+    this._openConfirmBillingDialog(aDataToProcess);
+}
+
+
+
+/**
+ * Función interna para gestionar la ventana nueva de confirmación multicliente
+ */
+private async _openConfirmBillingDialog(aDataToProcess: any[]): Promise<void> {
+    const oView = this.getView();
+    if (!oView) return;
+
+    this._aItemsToProcess = aDataToProcess;
+
+    if (!this._oConfirmDialog) {
+        // Uso directo del módulo importado
+        this._oConfirmDialog = await Fragment.load({
+            id: oView.getId(),
+            name: "contractbilling.view.fragment.ConfirmBilling",
+            controller: this
         });
-    } else {
-        const sDetalle = aDataToProcess.map(oItem => `- Posición: ${this.formatPos(oItem.PosContrato)}`).join("\n");
-        const sMsgSimple = `¿Confirmar facturación de ${aDataToProcess.length} posiciones del contrato ${aUniqueContracts[0]}?${sExclusionMsg}\n\n${sDetalle}`;
-        
-        MessageBox.confirm(sMsgSimple, {
-            title: "Revisión de Partidas",
-            onClose: (oAction: string | null) => {
-                if (oAction === MessageBox.Action.OK) this._sendToBackend(aDataToProcess, "I");
-            }
-        });
+        oView.addDependent(this._oConfirmDialog);
     }
+
+    this._oConfirmDialog.open();
 }
 
     /**
@@ -501,115 +596,193 @@ public onCollapseAll(): void {
      * Envío al Backend (Ajustado para usar el mes del filtro en la fecha de factura)
      */
 private _sendToBackend(aData: any[], sModePrefix: string): void {
-        const oView = this.getView();
-        const oModel = oView?.getModel("ZSD_GET_CONTRACT_BILLING_SRV") as ODataModel;
-        const oLocalModel = oView?.getModel("local") as JSONModel;
-        
-        if (!oView || !oModel || !oLocalModel) return;
-
-        oView.setBusy(true);
-
-        
-      const sMonth = (this.byId("slMonthFilter") as Select).getSelectedKey();
-        const iYear = (this.byId("slYearFilter") as Select).getSelectedKey();
-    const oNow = new Date();
-       
-       const sFechaHeader = `${iYear}${sMonth}${String(oNow.getDate()).padStart(2, '0')}`;
-        const oPayload = {
-            "ProcessId": "BATCH_" + sFechaHeader + "_" + oNow.getTime().toString().slice(-3),
-            "FechaFactura": sFechaHeader,
-            "Observaciones": sModePrefix + "|",
-            "BillingItemsSet": aData.map(oItem => {
-                const sKey = oItem.Contrato + "_" + oItem.PosContrato;
-                const aPlanItems = oLocalModel.getProperty("/planesDetalle/" + sKey) || [];
-                const sFplnr = aPlanItems.length > 0 ? aPlanItems[0].Fplnr : "";
-
-                return {
-                    "Contrato": oItem.Contrato,
-                    "PosContrato": oItem.PosContrato,
-                    "Total": sFplnr, 
-                    "TipoFact": oItem.TipoFact || "A"
-                };
-            })
-        };
-
-        oModel.create("/BillingHeaderSet", oPayload, {
-            success: (oResponse: any) => {
-                oView.setBusy(false);
-                const aItemsRes = oResponse.BillingItemsSet?.results || [];
-                const aFolios = [...new Set(aItemsRes.map((o: any) => o.Contrato).filter((f: any) => f))];
-                
-                let sMsg = oResponse.Observaciones ? oResponse.Observaciones : "Facturación procesada correctamente.";
-                sMsg += "\n\n";
-                if (aFolios.length > 0) {
-                    sMsg += "Documentos generados:\n" + aFolios.join("\n");
-                }
-
-                MessageBox.success(sMsg, {
-                    title: "Resultado de Facturación",
-                    onClose: () => {
-    this.onDeselectAll();
+    const oView = this.getView();
+    const oModel = oView?.getModel("ZSD_GET_CONTRACT_BILLING_SRV") as ODataModel;
+    const oLocalModel = oView?.getModel("local") as JSONModel;
     
-    const oLocalModel = this.getView()?.getModel("local") as JSONModel;
+    if (!oView || !oModel || !oLocalModel) return;
 
-    // 1. Vaciamos por completo el objeto de planes
-    // Esto es instantáneo y elimina cualquier error de "No Data"
-    oLocalModel.setProperty("/planesDetalle", {}); 
+    oView.setBusy(true);
 
-    // 2. Colapsamos para que la UI se resetee visualmente
-    this.onCollapseAll();
+    const sMonth = (this.byId("slMonthFilter") as Select).getSelectedKey();
+    const iYear = (this.byId("slYearFilter") as Select).getSelectedKey();
+    const oNow = new Date();
+    const sFechaHeader = `${iYear}${sMonth}${String(oNow.getDate()).padStart(2, '0')}`;
+    
+    const oPayload = {
+        "ProcessId": "BATCH_" + sFechaHeader + "_" + oNow.getTime().toString().slice(-3),
+        "FechaFactura": sFechaHeader,
+        "Observaciones": sModePrefix + "|",
+        "BillingItemsSet": aData.map(oItem => {
+            const sKey = oItem.Contrato + "_" + oItem.PosContrato;
+            const aPlanItems = oLocalModel.getProperty("/planesDetalle/" + sKey) || [];
+            const sFplnr = aPlanItems.length > 0 ? aPlanItems[0].Fplnr : "";
+            return {
+                "Contrato": oItem.Contrato,
+                "PosContrato": oItem.PosContrato,
+                "Total": sFplnr, 
+                "TipoFact": oItem.TipoFact || "A"
+            };
+        })
+    };
 
-    // 3. Refrescamos el OData con un delay pequeño
-    // El refresh(true) invalida el caché local del ODataModel
-    oModel.refresh(true, true);
+    oModel.create("/BillingHeaderSet", oPayload, {
+        success: (oResponse: any) => {
+            oView.setBusy(false);
+            const aItemsRes = oResponse.BillingItemsSet?.results || [];
+            
+            // --- NUEVA LÓGICA DE PROCESAMIENTO DE RESPUESTA ---
+            // Agrupamos por cliente basándonos en el string pipeado: "Contrato | Cliente | Pos | Factura"
+            const mGroups: any = {};
 
-    MessageToast.show("Datos actualizados correctamente.");
-                    }
+            aItemsRes.forEach((oItem: any) => {
+                if (!oItem.Contrato) return;
+                
+                const aParts = oItem.Contrato.split("|").map((s: string) => s.trim());
+                if (aParts.length < 4) return;
+
+                const [sContrato, sCliente, sPos, sFactura] = aParts;
+
+                if (!mGroups[sCliente]) {
+                    mGroups[sCliente] = [];
+                }
+                mGroups[sCliente].push(`   • Contrato: ${sContrato} | Pos: ${sPos} | Factura: ${sFactura}`);
+            });
+
+            // Construcción del mensaje final
+            let sMsg = oResponse.Observaciones ? oResponse.Observaciones : "Facturación procesada correctamente.";
+            sMsg += "\n\nDetalle por Cliente:\n";
+
+            const aClientes = Object.keys(mGroups);
+            if (aClientes.length > 0) {
+                aClientes.forEach(sNomCliente => {
+                    sMsg += `\n👤 ${sNomCliente}:\n${mGroups[sNomCliente].join("\n")}\n`;
                 });
-            },
-            error: (oError: any) => {
-                oView.setBusy(false);
-                let sErrorDetail = "Error en SAP";
-                try {
-                    const oMsg = JSON.parse(oError.responseText);
-                    sErrorDetail = oMsg.error.message.value;
-                } catch (e) { console.error(oError); }
-                MessageBox.error(sErrorDetail);
+            } else {
+                sMsg += "\nNo se generaron folios nuevos.";
             }
-        });
+
+            MessageBox.success(sMsg, {
+                title: "Resultado de Facturación",
+                contentWidth: "500px", // Ancho ajustado para que los pipes se vean bien
+                onClose: () => {
+                    this.onDeselectAll();
+                    oLocalModel.setProperty("/planesDetalle", {}); 
+                    this.onCollapseAll();
+                    oModel.refresh(true, true);
+                    MessageToast.show("Datos actualizados correctamente.");
+                }
+            });
+        },
+        error: (oError: any) => {
+            oView.setBusy(false);
+            let sErrorDetail = "Error en SAP";
+            try {
+                const oMsg = JSON.parse(oError.responseText);
+                sErrorDetail = oMsg.error.message.value;
+            } catch (e) { 
+                console.error(oError); 
+            }
+            MessageBox.error(sErrorDetail);
+        }
+    });
+}
+
+
+
+    
+public onSelectionChange(): void {
+    const oTable = this.byId("tableContracts") as Table;
+    const oBtn = this.byId("btnProcess") as Button;
+    const oTxtInfo = this.byId("txtSelectionInfo") as Text;
+    const oTxtTotal = this.byId("txtTotalSelected") as Title;
+    const aSelectedItems = oTable.getSelectedItems();
+    
+    if (aSelectedItems && aSelectedItems.length > 0) {
+        const fTotal = aSelectedItems.reduce((acc, oItem) => {
+            const oContext = oItem.getBindingContext("ZSD_GET_CONTRACT_BILLING_SRV");
+            const oData = oContext ? (oContext.getObject() as any) : { Total: 0 };
+            return acc + parseFloat(oData.Total || 0);
+        }, 0);
+
+        const sFormattedTotal = new Intl.NumberFormat('es-MX', {
+            style: 'currency', currency: 'MXN'
+        }).format(fTotal);
+
+        oTxtInfo.setText(`${aSelectedItems.length} seleccionadas:`);
+        oTxtTotal.setText(sFormattedTotal);
+        oTxtTotal.setVisible(true);
+        oBtn.setEnabled(true);
+    } else {
+        oTxtInfo.setText("Sin partidas seleccionadas");
+        oTxtTotal.setVisible(false);
+        oBtn.setEnabled(false);
+    }
+}
+
+
+
+    private async _validateRowSelection(oItem: any): Promise<boolean> {
+    const oContext = oItem.getBindingContext("ZSD_GET_CONTRACT_BILLING_SRV");
+    const oData = oContext.getObject();
+    const oLocalModel = this.getView()?.getModel("local") as JSONModel;
+    
+    const sTipoFact = oData.TipoFacturacion.includes("|") ? 
+                      oData.TipoFacturacion.split("|")[1].trim() : 
+                      oData.TipoFacturacion;
+
+    // Regla: Adelantada siempre pasa
+    if (sTipoFact.toUpperCase().includes("ADELANTADA")) {
+        return true;
     }
 
+    // Regla: Mes Vencido requiere validación
+    if (sTipoFact.toUpperCase().includes("VENCIDO")) {
+        const sKey = oData.Contrato + "_" + oData.PosContrato;
+        let aPlan = oLocalModel.getProperty("/planesDetalle/" + sKey);
 
+        // Si el plan no está en el modelo local, lo cargamos asíncronamente
+        if (!aPlan || aPlan.length === 0) {
+            try {
+                // Llamamos a tu función de carga existente
+                await this._forceLoadPlan(oContext);
+                aPlan = oLocalModel.getProperty("/planesDetalle/" + sKey);
+            } catch (e) {
+                return false;
+            }
+        }
 
-    
-    public onSelectionChange(): void {
-        const oTable = this.byId("tableContracts") as Table;
-        const oBtn = this.byId("btnProcess") as Button;
-        const oTxtInfo = this.byId("txtSelectionInfo") as Text;
-        const oTxtTotal = this.byId("txtTotalSelected") as Title;
-        const aSelectedItems = oTable.getSelectedItems();
-        
-        if (aSelectedItems && aSelectedItems.length > 0) {
-            const fTotal = aSelectedItems.reduce((acc, oItem) => {
-                const oContext = oItem.getBindingContext("ZSD_GET_CONTRACT_BILLING_SRV");
-                const oData = oContext ? (oContext.getObject() as any) : { Total: 0 };
-                return acc + parseFloat(oData.Total || 0);
-            }, 0);
+        // Verificamos si existe orden/factura en el plan
+        const bTieneOrden = aPlan && aPlan.some((oLine: any) => 
+            (oLine.Vbeln && oLine.Vbeln.trim() !== "" && oLine.Vbeln !== "---") || 
+            (oLine.Factura && oLine.Factura.trim() !== "")
+        );
 
-            const sFormattedTotal = new Intl.NumberFormat('es-MX', {
-                style: 'currency', currency: 'MXN'
-            }).format(fTotal);
-
-            oTxtInfo.setText(`${aSelectedItems.length} seleccionadas:`);
-            oTxtTotal.setText(sFormattedTotal);
-            oTxtTotal.setVisible(true);
-            oBtn.setEnabled(true);
-        } else {
-            oTxtInfo.setText("Sin partidas seleccionadas");
-            oTxtTotal.setVisible(false);
-            oBtn.setEnabled(false);
+        if (!bTieneOrden) {
+            // Solo mostramos MessageBox en selección individual para no saturar en el "Seleccionar Todo"
+            return false;
         }
     }
+
+    return true;
+}
+
+
+private _forceLoadPlan(oContext: any): Promise<void> {
+    return new Promise((resolve) => {
+        const sKey = oContext.getObject().Contrato + "_" + oContext.getObject().PosContrato;
+        
+        // Disparamos tu lógica de carga existente
+        this._fetchBillingPlan(oContext, { setBusy: () => {} });
+
+        const interval = setInterval(() => {
+            if (this.getView()?.getModel("local")?.getProperty("/planesDetalle/" + sKey + "_Loaded")) {
+                clearInterval(interval);
+                resolve();
+            }
+        }, 150);
+    });
+}
 
 
     public onApplyMonthFilter(): void {
@@ -790,21 +963,107 @@ public onExpandAll(): void {
 }
 
 private _finalizeRequest(oContainer: any): void {
-    oContainer.setBusy(false);
-    this._iPendingRequests--;
-    
-    // Actualizamos el contador visual si quieres (opcional)
-    if (this._oBusyDialog && this._iPendingRequests > 0) {
-        this._oBusyDialog.setTitle(`Quedan ${this._iPendingRequests} planes por cargar...`);
+    // Validación de seguridad para el contenedor
+    if (oContainer && typeof oContainer.setBusy === "function") {
+        oContainer.setBusy(false);
     }
 
-    // Si ya no hay peticiones pendientes, cerramos el diálogo
-    if (this._iPendingRequests <= 0) {
+    this._iPendingRequests--;
+    
+    // Si por algún error de red o navegación el contador baja de cero, lo reseteamos
+    if (this._iPendingRequests < 0) {
+        this._iPendingRequests = 0;
+    }
+
+    // Actualizamos el contador visual si hay peticiones pendientes
+    if (this._oBusyDialog && this._iPendingRequests > 0) {
+        this._oBusyDialog.setTitle(`Quedan ${this._iPendingRequests} planes por cargar...`);
+        this._oBusyDialog.setText(`Procesando Contratos, favor de esperar.`);
+    }
+
+    // Si ya no hay peticiones pendientes (o el contador se reseteó), cerramos todo
+    if (this._iPendingRequests === 0) {
         if (this._oBusyDialog) {
             this._oBusyDialog.close();
         }
         this.getView()?.setBusy(false);
     }
 }
+
+
+/**
+ * Calcula el porcentaje de avance basado exclusivamente en los ítems del plan local
+ */
+public formatProgressFromPlan(sContrato: string, sPos: string, oPlanesDetalle: any): number {
+    // Si aún no hay datos en el modelo local para esta clave, el progreso es 0
+    if (!oPlanesDetalle || !sContrato || !sPos) {
+        return 0;
+    }
+
+    const sKey = `${sContrato}_${sPos}`;
+    const aItems = oPlanesDetalle[sKey];
+
+    // Si el array no existe o está vacío, no hay plan cargado aún
+    if (!aItems || !Array.isArray(aItems) || aItems.length === 0) {
+        return 0;
+    }
+
+  const iTotalMeses = aItems.length;
+  // Consideramos facturado si tiene un número de factura válido (no vacío, no nulo, no guiones)
+  const iFacturados = aItems.filter((oItem: any) => 
+      oItem.Factura && oItem.Factura.trim() !== "" && oItem.Factura !== "---"
+  ).length;
+
+  return Math.round((iFacturados / iTotalMeses) * 100);
+}
+
+/**
+ * Genera el texto descriptivo basado en el conteo del plan (ej: "3 / 12 meses")
+ */
+public formatProgressText(sContrato: string, sPos: string, oPlanesDetalle: any): string {
+    if (!oPlanesDetalle || !sContrato || !sPos) {
+        return "Pendiente de carga...";
+    }
+
+    const sKey = `${sContrato}_${sPos}`;
+    const aItems = oPlanesDetalle[sKey];
+
+    if (!aItems || !Array.isArray(aItems) || aItems.length === 0) {
+        return "Cargando plan...";
+    }
+
+    const iTotalMeses = aItems.length;
+    const iFacturados = aItems.filter((oItem: any) => 
+        oItem.Factura && oItem.Factura.trim() !== "" && oItem.Factura !== "---"
+    ).length;
+
+    return `${iFacturados} / ${iTotalMeses} meses`;
+}
+
+public formatProgressState(sContrato: string, sPos: string, oPlanesDetalle: any): string {
+    const iPercent = this.formatProgressFromPlan(sContrato, sPos, oPlanesDetalle);
+    
+    if (iPercent === 0) return "None";
+    if (iPercent === 100) return "Success";
+    if (iPercent > 50) return "Information";
+    return "Warning";
+}
+
+public onConfirmGlobalBilling(): void {
+    this._oConfirmDialog.close();
+    // Enviamos el prefijo 'G' para Factura Global
+    this._sendToBackend(this._aItemsToProcess, "G");
+}
+
+public onConfirmIndividualBilling(): void {
+    this._oConfirmDialog.close();
+    // Enviamos el prefijo 'I' para Factura Individual por Contrato
+    this._sendToBackend(this._aItemsToProcess, "I");
+}
+
+public onCloseConfirmDialog(): void {
+    this._oConfirmDialog.close();
+}
+
 
 }

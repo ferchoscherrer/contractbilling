@@ -137,7 +137,7 @@
         },
         {
           "name": "RouteContractDetail",
-          "pattern": "ContractDetail/{customerId}/{date}",
+          "pattern": "ContractDetail/{customerId}/{date}/:?query:",
           "target": [
             "TargetContractDetail"
           ]
