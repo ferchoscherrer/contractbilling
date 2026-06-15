@@ -230,23 +230,68 @@ private _fetchBillingPlan(oContext: any, oContainer: any): void {
             const aPlanItems = oData.BillingPlanItemsSet?.results || [];
 
             if (aPlanItems.length > 0) {
-                // 1. Seteamos los datos en el modelo local
                 oLocalModel.setProperty("/planesDetalle/" + sKey, aPlanItems);
                 oLocalModel.setProperty("/planesDetalle/" + sKey + "_Loaded", true);
 
-                // 2. FORZAR ACTUALIZACIÓN (Casting a 'any' para evitar error ts2339)
                 (oLocalModel as any).checkUpdate(true);
 
                 const oScroll = oContainer.getItems()[1];
                 const oTableDetalle = oScroll.getContent()[0] as Table; 
 
                 if (oTableDetalle && typeof oTableDetalle.bindItems === "function") {
+                    // Sincronizamos anchos de columna con el encabezado del XML
+                    const aColumns = oTableDetalle.getColumns();
+                    if (aColumns.length >= 4) {
+                        aColumns[0].setWidth("30%"); // Mes / Año
+                        aColumns[1].setWidth("25%"); // Orden
+                        aColumns[2].setWidth("25%"); // Factura
+                        aColumns[3].setWidth("20%"); // Estado
+                    }
+
                     oTableDetalle.bindItems({
                         path: "local>/planesDetalle/" + sKey,
                         template: new ColumnListItem({
                             cells: [
-                                new Label({ design: "Bold", text: { path: "local>Afdat", type: new (DateType as any)({ source: { pattern: "yyyyMMdd" } }, { pattern: "MMM yyyy" }) } }),
-                                new Text({ text: "{= ${local>Vbeln} ? ${local>Vbeln} : '---' }" }),
+                                new Label({ 
+                                    design: "Bold", 
+                                    text: { 
+                                        path: "local>Afdat", 
+                                        type: new (DateType as any)({ source: { pattern: "yyyyMMdd" } }, { pattern: "MMM yyyy" }) 
+                                    } 
+                                }),
+                                new VBox({
+                                    renderType: "Bare",
+                                    items: [
+                                        new Text({
+                                            text: {
+                                                path: "local>Orden",
+                                                formatter: (sOrden: string) => {
+                                                    if (!sOrden || sOrden === "---") return "---";
+                                                    const sRaw = sOrden.includes("|") ? sOrden.split("|")[0].trim() : sOrden.trim();
+                                                    return sRaw.replace(/^0+/, ''); 
+                                                }
+                                            },
+                                            visible: "{= ${local>Orden} !== '---' }"
+                                        }),
+                                        new ObjectStatus({
+                                            text: {
+                                                path: "local>Orden",
+                                                formatter: (sOrden: string) => {
+                                                    if (sOrden && sOrden.includes("|")) {
+                                                        const aParts = sOrden.split("|");
+                                                        return aParts.length >= 3 ? aParts[2].trim() : "";
+                                                    }
+                                                    return "";
+                                                }
+                                            },
+                                            state: "Indication05",
+                                            visible: {
+                                                path: "local>Orden",
+                                                formatter: (sOrden: string) => !!(sOrden && sOrden.includes("|"))
+                                            }
+                                        }).addStyleClass("myOrderBadge") 
+                                    ]
+                                }),
                                 new Link({ text: "{local>Factura}", visible: "{= !!${local>Factura} }" }),
                                 new ObjectStatus({ 
                                     text: "{= ${local>Factura}  ? 'FACTURADO' : 'PENDIENTE' }",
@@ -260,7 +305,7 @@ private _fetchBillingPlan(oContext: any, oContainer: any): void {
 
                     const sCurrentMonth = (this.byId("slMonthFilter") as Select).getSelectedKey();
                     this._applyPlanLocalFilter(oTableDetalle.getBinding("items"), sCurrentMonth);
-                    oTableDetalle.setFixedLayout(false);
+                    oTableDetalle.setFixedLayout(true); // Forzamos el layout fijo para respetar porcentajes
                 }
             }
         },
@@ -270,7 +315,6 @@ private _fetchBillingPlan(oContext: any, oContainer: any): void {
         }
     });
 }
-
 
 
 /**

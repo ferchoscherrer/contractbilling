@@ -1,1 +1,14 @@
 /* Enter your custom styles here */
+
+/* Clase personalizada para el badge de orden */
+.myOrderBadge {
+    font-size: 0.63rem !important; /* Tamaño más pequeño */
+    font-weight: bold;
+    padding: 0 4px;
+    border-radius: 4px;
+}
+
+/* Ajuste opcional para reducir el espacio entre la orden y el badge */
+.sapMVBox.sapUiFontSmall {
+    gap: 0px !important;
+}

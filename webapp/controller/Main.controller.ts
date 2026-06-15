@@ -128,16 +128,31 @@ export default class Main extends Controller {
 
 
 
-    public async onOpenPopUpiptCustomer(): Promise<void> {
-        this.oFragmentCustomer ??= await Fragment.load({
-            id: this.getView()?.getId(),
-            name: "contractbilling.view.fragment.TblCustomer",
-            controller: this,
-        }) as Dialog;
+   public async onOpenPopUpiptCustomer(): Promise<void> {
+    this.oFragmentCustomer ??= await Fragment.load({
+        id: this.getView()?.getId(),
+        name: "contractbilling.view.fragment.TblCustomer",
+        controller: this,
+    }) as Dialog;
 
-        this.getView()?.addDependent(this.oFragmentCustomer);
-        this.oFragmentCustomer.open();
+    this.getView()?.addDependent(this.oFragmentCustomer);
+
+    // --- SOLUCIÓN: Limpiar el binding antes de abrir ---
+    // Esto asegura que si había una búsqueda previa, se limpie, 
+    // o que no cargue nada si así lo configuras.
+    const oSelectDialog = this.oFragmentCustomer as any;
+    const oBinding = oSelectDialog.getBinding("items");
+    
+    if (oBinding) {
+        // Opción A: Mandar un filtro que sabes que no traerá nada para que inicie vacío
+        // Opción B: Simplemente resetearlo (aunque esto suele disparar un GET vacío)
+        oBinding.filter([new Filter("CustomerCode", FilterOperator.EQ, "XXXXX")]); 
     }
+
+    this.oFragmentCustomer.open();
+}
+
+
 
     public onSearchCustomer(oEvent: any): void {
         const sValue = oEvent.getParameter("value") || "";
@@ -147,7 +162,8 @@ export default class Main extends Controller {
             const oFilter = new Filter({
                 filters: [
                     new Filter("CustomerCode", FilterOperator.Contains, sValue),
-                    new Filter("Name1", FilterOperator.Contains, sValue)
+                    new Filter("Name1", FilterOperator.Contains, sValue),
+                    new Filter("RFC", FilterOperator.Contains, sValue)
                 ],
                 and: false
             });

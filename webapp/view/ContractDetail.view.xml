@@ -133,7 +133,6 @@
                                 text="{ZSD_GET_CONTRACT_BILLING_SRV>Status}" 
                                 state="{= ${ZSD_GET_CONTRACT_BILLING_SRV>Status} === 'LIB.' ? 'Success' : 'Warning' }" />
 
-                            <!-- Celda de Tipo y Frecuencia de Facturación -->
                             <VBox>
                                 <HBox alignItems="Center">
                                     <core:Icon src="sap-icon://accept" color="Success" class="sapUiTinyMarginEnd" size="0.8rem"/>
@@ -155,31 +154,31 @@
                                 <VBox width="100%">
                                     <ProgressIndicator
                                         percentValue="{
-        parts: [
-            'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
-            'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
-            'local>/planesDetalle'
-        ],
-        formatter: '.formatProgressFromPlan'
-    }"
-    displayValue="{
-        parts: [
-            'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
-            'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
-            'local>/planesDetalle'
-        ],
-        formatter: '.formatProgressText'
-    }"
-    showValue="true"
-    height="1.2rem"
-    state="{
-        parts: [
-            'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
-            'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
-            'local>/planesDetalle'
-        ],
-        formatter: '.formatProgressState'
-    }" />
+                                            parts: [
+                                                'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
+                                                'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
+                                                'local>/planesDetalle'
+                                            ],
+                                            formatter: '.formatProgressFromPlan'
+                                        }"
+                                        displayValue="{
+                                            parts: [
+                                                'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
+                                                'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
+                                                'local>/planesDetalle'
+                                            ],
+                                            formatter: '.formatProgressText'
+                                        }"
+                                        showValue="true"
+                                        height="1.2rem"
+                                        state="{
+                                            parts: [
+                                                'ZSD_GET_CONTRACT_BILLING_SRV>Contrato',
+                                                'ZSD_GET_CONTRACT_BILLING_SRV>PosContrato',
+                                                'local>/planesDetalle'
+                                            ],
+                                            formatter: '.formatProgressState'
+                                        }" />
                                 </VBox>
                             </HBox>
                             
@@ -201,24 +200,26 @@
                                     class="sapUiTinyMarginBottom"/>
 
                                 <VBox visible="false" renderType="Bare">
+                                    <!-- Encabezado con anchos proporcionales sincronizados -->
                                     <OverflowToolbar design="Info" height="2.5rem" class="sapUiTinyMarginTop">
-                                        <Label text="Mes / Año" width="10rem" class="sapUiSmallMarginBegin" design="Bold" />
-                                        <Label text="Orden" width="8rem" design="Bold" />
-                                        <Label text="Factura" width="9rem" design="Bold" />
+                                        <Label text="Mes / Año" width="30%" class="sapUiSmallMarginBegin" design="Bold" />
+                                        <Label text="Orden" width="25%" design="Bold" />
+                                        <Label text="Factura" width="25%" design="Bold" />
                                         <ToolbarSpacer />
-                                        <Label text="Estado" width="8rem" textAlign="End" design="Bold" class="sapUiSmallMarginEnd" />
+                                        <Label text="Estado" width="20%" textAlign="End" design="Bold" class="sapUiSmallMarginEnd" />
                                     </OverflowToolbar>
 
                                     <ScrollContainer height="240px" vertical="true">
+                                        <!-- Tabla interna con fixedLayout para respetar los % del controlador -->
                                         <Table inset="false" 
-                                               fixedLayout="false" 
+                                               fixedLayout="true" 
                                                showSeparators="Inner"
                                                items="{path: 'local>/', templateShareable: false}"> 
                                             <columns>
-                                                <Column width="10rem" />
-                                                <Column width="8rem" />
-                                                <Column width="9rem" />
-                                                <Column hAlign="End" width="8rem" />
+                                                <Column width="30%" />
+                                                <Column width="25%" />
+                                                <Column width="25%" />
+                                                <Column hAlign="End" width="20%" />
                                             </columns>
                                             <items>
                                                 <ColumnListItem>
@@ -228,12 +229,25 @@
                                                             type: 'sap.ui.model.type.Date',
                                                             formatOptions: { source: { pattern: 'yyyyMMdd' }, pattern: 'MMM yyyy' }
                                                         }" design="Bold"/>
-                                                        <Text text="{= ${Contrato} ? ${Contrato} : '---' }"/>
-                                                        <Link text="{Fakwr}" visible="{= !!${Fakwr} }" />
+                                                        
+                                                        <VBox renderType="Bare">
+                                                            <Text 
+                                                                text="{= ${Orden} &amp;&amp; ${Orden}.indexOf('|') !== -1 ? parseInt(${Orden}.split('|')[0].trim(), 10) : ${Orden} }" 
+                                                                visible="{= ${Orden} !== '---' }" />
+                                                            <ObjectStatus 
+                                                                text="{= ${Orden} &amp;&amp; ${Orden}.indexOf('|') !== -1 ? ${Orden}.split('|')[2].trim() : '' }"
+                                                                state="Indication05" 
+                                                                visible="{= ${Orden} &amp;&amp; ${Orden}.indexOf('|') !== -1 }"
+                                                                class="sapUiTinyMarginTop" />
+                                                            <Text text="---" visible="{= ${Orden} === '---' }" />
+                                                        </VBox>
+
+                                                        <Link text="{Factura}" visible="{= !!${Factura} }" />
+                                                        
                                                         <ObjectStatus 
-                                                            text="{= ${Factura} === 'C' ? 'FACTURADO' : 'PENDIENTE' }" 
-                                                            state="{= ${Factura} === 'C' ? 'Success' : 'Warning' }"
-                                                            icon="{= ${Factura} === 'C' ? 'sap-icon://accept' : 'sap-icon://alert' }"/>
+                                                            text="{= !!${Factura} ? 'FACTURADO' : 'PENDIENTE' }" 
+                                                            state="{= !!${Factura} ? 'Success' : 'Warning' }"
+                                                            icon="{= !!${Factura} ? 'sap-icon://accept' : 'sap-icon://alert' }"/>
                                                     </cells>
                                                 </ColumnListItem>
                                             </items>

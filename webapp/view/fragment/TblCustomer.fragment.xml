@@ -20,6 +20,7 @@
 			<cells>
                 <Text text="{ZSD_CATALOGOS_SRV>CustomerCode}"/> 
                 <Text text="{ZSD_CATALOGOS_SRV>Name1}"/>
+				<Text text="{ZSD_CATALOGOS_SRV>RFC}"/>
 			</cells>
 		</ColumnListItem>
 		<columns>
