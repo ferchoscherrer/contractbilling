@@ -22,52 +22,55 @@
 
         <f:content>
             <VBox class="sapUiSmallMargin">
+                
+                
                 <form:SimpleForm 
-                    editable="true"
-                    layout="ResponsiveGridLayout"
-                    labelSpanL="3" labelSpanM="3" emptySpanL="4" emptySpanM="4"
-                    columnsL="1" columnsM="1">
-                    
-                    <form:content>
-                        <core:Title text="{i18n>filters}" />
-                        
-                        <Label text="{i18n>customer}" labelFor="miCustomer" required="false" />
-                        <MultiInput 
-                            id="miCustomer" 
-    placeholder="Pegue desde Excel o use la ayuda de búsqueda..."
-    showValueHelp="true" 
-    valueHelpRequest=".onOpenPopUpiptCustomer"
-    enableMultiLineMode="true"
-    liveChange=".onLiveChangeMultiInput"
-    change=".onTokenUpdate" 
-    width="100%" />
+    editable="true"
+    layout="ResponsiveGridLayout"
+    labelSpanL="3" labelSpanM="3" labelSpanS="12"
+    emptySpanL="0" emptySpanM="0" emptySpanS="0"
+    columnsL="2" columnsM="1" columnsS="1">
+    
+    <form:content>
+        <core:Title text="{i18n>filters}" />
+        
+        <Label text="{i18n>customer}" labelFor="miCustomer" required="false" />
+        <MultiInput 
+            id="miCustomer" 
+            placeholder="Pegue desde Excel o use la ayuda de búsqueda..."
+            showValueHelp="true" 
+            valueHelpRequest=".onOpenPopUpiptCustomer"
+            enableMultiLineMode="true"
+            liveChange=".onLiveChangeMultiInput"
+            change=".onTokenUpdate" 
+            width="100%" />
 
-                        <Label text="Rango de Meses" labelFor="DRPBillingDate" />
-                        <DateRangeSelection
-                            id="DRPBillingDate"
-                            displayFormat="MM/yyyy"
-                            placeholder="Desde - Hasta" />
+        <Label text="Rango de Meses" labelFor="DRPBillingDate" />
+        <DateRangeSelection
+            id="DRPBillingDate"
+            displayFormat="MM/yyyy"
+            placeholder="Desde - Hasta" />
 
-                        <Label text="{i18n>quotationNumber}" labelFor="miQuotation" />
-                        <MultiInput 
-                            id="miQuotation"
-                            placeholder="Pegue aquí sus cotizaciones..."
-                            showValueHelp="true"
-                            enableMultiLineMode="true"
-                            liveChange=".onLiveChangeMultiInput"
-                            change=".onTokenUpdate"
-                            valueHelpRequest="onOpenPopUpQuotationNumber"
-                            width="100%"/>
+        <Label text="{i18n>quotationNumber}" labelFor="miQuotation" />
+        <MultiInput 
+            id="miQuotation"
+            placeholder="Pegue aquí sus cotizaciones..."
+            showValueHelp="true"
+            enableMultiLineMode="true"
+            liveChange=".onLiveChangeMultiInput"
+            change=".onTokenUpdate"
+            valueHelpRequest="onOpenPopUpQuotationNumber"
+            width="100%"/>
 
-                        <Label text="Estatus" labelFor="mcbStatus" visible="false" />
-                        <MultiComboBox visible="false" id="mcbStatus">
-                            <core:Item key="LIB." text="Liberado" />
-                            <core:Item key="PEND." text="Pendiente" />
-                            <core:Item key="CONC." text="Concluido" />
-                        </MultiComboBox>
-                            
-                    </form:content>
-                </form:SimpleForm>
+        <Label text="Estatus" labelFor="mcbStatus" visible="false" />
+        <MultiComboBox visible="false" id="mcbStatus">
+            <core:Item key="LIB." text="Liberado" />
+            <core:Item key="PEND." text="Pendiente" />
+            <core:Item key="CONC." text="Concluido" />
+        </MultiComboBox>
+            
+    </form:content>
+</form:SimpleForm>
             </VBox>
         </f:content>
 

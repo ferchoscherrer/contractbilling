@@ -240,14 +240,24 @@ private _fetchBillingPlan(oContext: any, oContainer: any): void {
 
                 if (oTableDetalle && typeof oTableDetalle.bindItems === "function") {
                     // Sincronizamos anchos de columna con el encabezado del XML
-                    const aColumns = oTableDetalle.getColumns();
+                    /*const aColumns = oTableDetalle.getColumns();
+                    
                     if (aColumns.length >= 4) {
                         aColumns[0].setWidth("30%"); // Mes / Año
                         aColumns[1].setWidth("25%"); // Orden
                         aColumns[2].setWidth("25%"); // Factura
                         aColumns[3].setWidth("20%"); // Estado
                     }
+                        */
 
+                    const aColumns = oTableDetalle.getColumns();
+if (aColumns.length >= 4) {
+    aColumns[0].setWidth("120px");
+    aColumns[1].setWidth("150px");
+    aColumns[2].setWidth("150px");
+    aColumns[3].setWidth("120px");
+     }
+                    
                     oTableDetalle.bindItems({
                         path: "local>/planesDetalle/" + sKey,
                         template: new ColumnListItem({
@@ -470,7 +480,146 @@ public onCollapseAll(): void {
      * si desea factura global o por contrato si hay múltiples contratos.
      */
 
-   public async onProcessBilling(): Promise<void> {
+//    public async onProcessBilling(): Promise<void> {
+//     const oTable = this.byId("tableContracts") as Table;
+//     const aSelectedItems = oTable.getSelectedItems();
+    
+//     if (!aSelectedItems || aSelectedItems.length === 0) {
+//         MessageToast.show("Por favor, seleccione al menos una partida.");
+//         return; 
+//     }
+
+//     const oMonthSelect = this.byId("slMonthFilter") as Select;
+//     const oYearSelect = this.byId("slYearFilter") as Select;
+//     const sMonth = oMonthSelect.getSelectedKey();
+//     const sYear = oYearSelect.getSelectedKey();
+
+//     if (sMonth === "all" || sYear === "all") {
+//         MessageBox.warning("Para procesar la factura, debe seleccionar un MES y un AÑO específicos.");
+//         return;
+//     }
+
+//     this.getView()?.setBusy(true);
+
+//     const oLocalModel = this.getView()?.getModel("local") as JSONModel;
+//     const aDataToProcess: any[] = [];
+//     const aAlreadyBilled: string[] = [];
+//     const aRejectedByRule: string[] = [];
+
+//     // 1. Filtrado de posiciones (Reglas de Negocio + Facturación previa)
+//     for (const oItem of aSelectedItems) {
+//         const oContext = oItem.getBindingContext("ZSD_GET_CONTRACT_BILLING_SRV");
+        
+//         // --- SOLUCIÓN AL ERROR TS(18048): Validación de existencia de oContext ---
+//         if (!oContext) {
+//             continue; 
+//         }
+
+//         const oData = oContext.getObject() as any;
+//         const sKey = oData.Contrato + "_" + oData.PosContrato;
+        
+//         // --- ASEGURAR CARGA DEL PLAN ---
+//         let aPlan = oLocalModel.getProperty("/planesDetalle/" + sKey);
+//         if (!aPlan || aPlan.length === 0) {
+//             await this._forceLoadPlan(oContext);
+//             aPlan = oLocalModel.getProperty("/planesDetalle/" + sKey) || [];
+//         }
+
+//         // --- REGLA: MES VENCIDO SIN ORDEN ---
+//         const sTipoFact = oData.TipoFacturacion.includes("|") ? oData.TipoFacturacion.split("|")[1].trim() : oData.TipoFacturacion;
+//         if (sTipoFact.toUpperCase().includes("VENCIDO")) {
+//             const bTieneOrden = aPlan.some((oLine: any) => 
+//                 (oLine.Vbeln && oLine.Vbeln.trim() !== "" && oLine.Vbeln !== "---") || 
+//                 (oLine.Factura && oLine.Factura.trim() !== "")
+//             );
+
+//             if (!bTieneOrden) {
+//                 aRejectedByRule.push(`- Contrato: ${oData.Contrato}, Pos: ${this.formatPos(oData.PosContrato)} (Sin Orden de Servicio)`);
+//                 oTable.setSelectedItem(oItem, false);
+//                 continue;
+//             }
+//         }
+
+//         // --- VALIDACIÓN DE FACTURACIÓN PREVIA ---
+//         const oPlanMesAnio = aPlan.find((oLine: any) => {
+//             if (!oLine.Afdat) return false;
+//             return oLine.Afdat.substring(0, 4) === sYear && oLine.Afdat.substring(4, 6) === sMonth;
+//         });
+
+//         const bTieneFactura = oPlanMesAnio && oPlanMesAnio.Factura;
+
+//         if (bTieneFactura) {
+//             aAlreadyBilled.push(`- Contrato: ${oData.Contrato}, Pos: ${this.formatPos(oData.PosContrato)}`);
+//         } else {
+//             aDataToProcess.push(oData);
+//         }
+//     }
+
+//     this.getView()?.setBusy(false);
+
+//     // Mensaje de advertencia si hubo rechazos por regla de negocio
+//     if (aRejectedByRule.length > 0) {
+//         await new Promise((resolve) => {
+//             MessageBox.error("Las siguientes posiciones se omitieron por ser 'Mes Vencido' sin Orden de Servicio:\n\n" + aRejectedByRule.join("\n"), {
+//                 onClose: resolve
+//             });
+//         });
+//     }
+
+//     if (aDataToProcess.length === 0) {
+//         if (aAlreadyBilled.length > 0) {
+//             MessageBox.error(`Todas las posiciones seleccionadas ya aparecen como facturadas para ${sMonth}/${sYear}.`);
+//         }
+//         return;
+//     }
+
+//     // 2. AGRUPACIÓN POR CLIENTE CON DETALLE DE CONTRATOS
+//     const mGroups = aDataToProcess.reduce((acc: any, item: any) => {
+//         const sKey = item.Cliente;
+//         if (!acc[sKey]) {
+//             acc[sKey] = {
+//                 Cliente: sKey,
+//                 NombreCliente: item.NombreCliente,
+//                 ContratosSet: new Set(),
+//                 Posiciones: 0,
+//                 Items: []
+//             };
+//         }
+//         acc[sKey].ContratosSet.add(item.Contrato);
+//         acc[sKey].Posiciones++;
+//         acc[sKey].Items.push(item);
+//         return acc;
+//     }, {});
+
+//     const aSummary = Object.values(mGroups).map((oGroup: any) => ({
+//         Cliente: oGroup.Cliente,
+//         NombreCliente: oGroup.NombreCliente,
+//         CantContratos: oGroup.ContratosSet.size,
+//         CantPosiciones: oGroup.Posiciones,
+//         DetalleContratos: Array.from(oGroup.ContratosSet).join(", "),
+//         Items: oGroup.Items
+//     }));
+
+//     // 3. CONFIGURACIÓN DINÁMICA PARA EL FRAGMENTO
+//     const bMultiCliente = aSummary.length > 1;
+//     const sHeaderText = bMultiCliente 
+//         ? "Se han seleccionado partidas de múltiples clientes. Revise el resumen:" 
+//         : `Resumen de facturación para el cliente ${aSummary[0].NombreCliente}:`;
+
+//     const sMesTxt = oMonthSelect.getSelectedItem()?.getText() || "";
+
+//     oLocalModel.setProperty("/resumenFacturacion", aSummary);
+//     oLocalModel.setProperty("/confirmHeaderText", sHeaderText);
+//     oLocalModel.setProperty("/mesFacturarLabel", `${sMesTxt} ${sYear}`);
+//     oLocalModel.setProperty("/isMultiCliente", bMultiCliente);
+//     oLocalModel.setProperty("/totalPartidasAFacturar", aDataToProcess.length);
+//     oLocalModel.setProperty("/msgExclusiones", aAlreadyBilled.length > 0 ? aAlreadyBilled.join("\n") : "");
+
+//     // 4. LLAMADA A LA VENTANA NUEVA (Fragment)
+//     this._openConfirmBillingDialog(aDataToProcess);
+// }
+
+public async onProcessBilling(): Promise<void> {
     const oTable = this.byId("tableContracts") as Table;
     const aSelectedItems = oTable.getSelectedItems();
     
@@ -500,7 +649,6 @@ public onCollapseAll(): void {
     for (const oItem of aSelectedItems) {
         const oContext = oItem.getBindingContext("ZSD_GET_CONTRACT_BILLING_SRV");
         
-        // --- SOLUCIÓN AL ERROR TS(18048): Validación de existencia de oContext ---
         if (!oContext) {
             continue; 
         }
@@ -515,28 +663,35 @@ public onCollapseAll(): void {
             aPlan = oLocalModel.getProperty("/planesDetalle/" + sKey) || [];
         }
 
+        // Localizar la línea específica del mes/año a facturar
+        const oPlanMes = aPlan.find((oLine: any) => 
+            oLine.Afdat && oLine.Afdat.substring(0, 4) === sYear && oLine.Afdat.substring(4, 6) === sMonth
+        );
+
+        if (!oPlanMes) {
+            aRejectedByRule.push(`- Contrato: ${oData.Contrato}, Pos: ${this.formatPos(oData.PosContrato)} (No hay plan para ${sMonth}/${sYear})`);
+            oTable.setSelectedItem(oItem, false);
+            continue;
+        }
+
         // --- REGLA: MES VENCIDO SIN ORDEN ---
         const sTipoFact = oData.TipoFacturacion.includes("|") ? oData.TipoFacturacion.split("|")[1].trim() : oData.TipoFacturacion;
         if (sTipoFact.toUpperCase().includes("VENCIDO")) {
-            const bTieneOrden = aPlan.some((oLine: any) => 
-                (oLine.Vbeln && oLine.Vbeln.trim() !== "" && oLine.Vbeln !== "---") || 
-                (oLine.Factura && oLine.Factura.trim() !== "")
-            );
+            // Validar que la orden esté presente y sea válida
+            const bTieneOrden = oPlanMes.Orden && 
+                                oPlanMes.Orden.trim() !== "" && 
+                                oPlanMes.Orden !== "---" && 
+                                oPlanMes.Orden !== "000000000000";
 
             if (!bTieneOrden) {
-                aRejectedByRule.push(`- Contrato: ${oData.Contrato}, Pos: ${this.formatPos(oData.PosContrato)} (Sin Orden de Servicio)`);
+                aRejectedByRule.push(`- Contrato: ${oData.Contrato}, Pos: ${this.formatPos(oData.PosContrato)} (Sin Orden de Servicio válida)`);
                 oTable.setSelectedItem(oItem, false);
                 continue;
             }
         }
 
         // --- VALIDACIÓN DE FACTURACIÓN PREVIA ---
-        const oPlanMesAnio = aPlan.find((oLine: any) => {
-            if (!oLine.Afdat) return false;
-            return oLine.Afdat.substring(0, 4) === sYear && oLine.Afdat.substring(4, 6) === sMonth;
-        });
-
-        const bTieneFactura = oPlanMesAnio && oPlanMesAnio.Factura;
+        const bTieneFactura = oPlanMes.Factura && oPlanMes.Factura.trim() !== "" && oPlanMes.Factura !== "---";
 
         if (bTieneFactura) {
             aAlreadyBilled.push(`- Contrato: ${oData.Contrato}, Pos: ${this.formatPos(oData.PosContrato)}`);
@@ -550,7 +705,7 @@ public onCollapseAll(): void {
     // Mensaje de advertencia si hubo rechazos por regla de negocio
     if (aRejectedByRule.length > 0) {
         await new Promise((resolve) => {
-            MessageBox.error("Las siguientes posiciones se omitieron por ser 'Mes Vencido' sin Orden de Servicio:\n\n" + aRejectedByRule.join("\n"), {
+            MessageBox.error("Las siguientes posiciones se omitieron por no cumplir con la Orden de Servicio requerida:\n\n" + aRejectedByRule.join("\n"), {
                 onClose: resolve
             });
         });
@@ -608,7 +763,6 @@ public onCollapseAll(): void {
     // 4. LLAMADA A LA VENTANA NUEVA (Fragment)
     this._openConfirmBillingDialog(aDataToProcess);
 }
-
 
 
 /**
@@ -670,6 +824,12 @@ private _sendToBackend(aData: any[], sModePrefix: string): void {
         })
     };
 
+
+    console.group("🚀 Payload enviado al Backend SAP");
+    console.log(JSON.stringify(oPayload, null, 4));
+    console.groupEnd();
+
+    
     oModel.create("/BillingHeaderSet", oPayload, {
         success: (oResponse: any) => {
             oView.setBusy(false);

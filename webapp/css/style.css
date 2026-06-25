@@ -12,3 +12,33 @@
 .sapMVBox.sapUiFontSmall {
     gap: 0px !important;
 }
+
+.scrollableContainer {
+    overflow-x: auto !important;
+    display: block;
+    width: 100%;
+}
+
+/* Previene que el texto dentro de la tabla rompa el layout */
+.sapMListTblCell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Mejora el contenedor de detalle del plan */
+.sapMScrollContVertical {
+    min-width: 300px;
+}
+
+/* Asegura que el contenedor de scroll permita el desbordamiento */
+.sapMScrollContHorizontal {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Opcional: Asegura que el texto no se force a saltar de línea */
+.sapMListTblCell .sapMLabel, 
+.sapMListTblCell .sapMText {
+    white-space: nowrap;
+}

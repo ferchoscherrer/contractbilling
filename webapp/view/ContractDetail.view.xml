@@ -95,16 +95,14 @@
                 </headerToolbar>
 
                 <columns>
-                    <Column width="4em" hAlign="Center"><Text text="Pos." /></Column>
-                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Equipo / Descripción" /></Column>
-                    <Column minScreenWidth="Desktop" demandPopin="true" width="10em"><Text text="Vigencia" /></Column>
-                    <Column hAlign="Center" width="8em"><Text text="Estatus" /></Column>
-                    <Column minScreenWidth="Desktop" demandPopin="true" width="12rem"><Text text="Tipo Facturación" /></Column>
-                    <Column minScreenWidth="Desktop" demandPopin="true" width="14rem"><Text text="Estado de Facturación" /></Column>
-                    <Column hAlign="End" width="10em"><Text text="Importe" /></Column>
-                    <Column minScreenWidth="Tablet" demandPopin="true" popinDisplay="Inline">
-                        <Text text="Detalle del Plan" />
-                    </Column>
+                    <Column width="3em" hAlign="Center"><Text text="Pos." /></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true" popinDisplay="Block"><Text text="Equipo / Descripción" /></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true" popinDisplay="Inline" width="8em"><Text text="Vigencia" /></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true" popinDisplay="Inline" width="6em"><Text text="Estatus" /></Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true" popinDisplay="Inline" width="10rem"><Text text="Tipo Fact." /></Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true" popinDisplay="Inline" width="12rem"><Text text="Estado Fact." /></Column>
+                    <Column hAlign="End" width="8em"><Text text="Importe" /></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true" popinDisplay="Inline"><Text text="Detalle" /></Column>
                 </columns>
 
                 <items>
@@ -200,17 +198,15 @@
                                     class="sapUiTinyMarginBottom"/>
 
                                 <VBox visible="false" renderType="Bare">
-                                    <!-- Encabezado con anchos proporcionales sincronizados -->
                                     <OverflowToolbar design="Info" height="2.5rem" class="sapUiTinyMarginTop">
-                                        <Label text="Mes / Año" width="30%" class="sapUiSmallMarginBegin" design="Bold" />
-                                        <Label text="Orden" width="25%" design="Bold" />
-                                        <Label text="Factura" width="25%" design="Bold" />
+                                        <Label text="Mes / Año" width="21%" class="sapUiSmallMarginBegin" design="Bold" />
+                                        <Label text="Orden" width="20%" design="Bold" />
+                                        <Label text="Factura" width="20%" design="Bold" textAlign="Center" />
                                         <ToolbarSpacer />
-                                        <Label text="Estado" width="20%" textAlign="End" design="Bold" class="sapUiSmallMarginEnd" />
+                                        <Label text="Estado" width="28%" textAlign="End" design="Bold" class="sapUiSmallMarginEnd" />
                                     </OverflowToolbar>
 
                                     <ScrollContainer height="240px" vertical="true">
-                                        <!-- Tabla interna con fixedLayout para respetar los % del controlador -->
                                         <Table inset="false" 
                                                fixedLayout="true" 
                                                showSeparators="Inner"
